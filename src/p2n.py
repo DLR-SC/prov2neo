@@ -1,146 +1,160 @@
-from collections import namedtuple
+import types
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from typing import Any, Dict, Set, Type, Union
 
 from neotime import DateTime, Duration, Time
+from prov.constants import PROV_N_MAP
 from prov.identifier import QualifiedName
 from prov.model import (ProvActivity, ProvAgent, ProvDocument, ProvElement,
                         ProvEntity, ProvRelation)
 from py2neo import Graph
-from py2neo.ogm import GraphObject, Property, Related
+from py2neo.ogm import GraphObject, Property, RelatedTo
 
 
-PROV_RELATIONS = {
-    "Attribution":    "wasAttributedTo",
-    "Association":    "wasAssociatedWith",
-    "Derivation":     "wasDerivedFrom",
-    "Communication":  "wasInformedBy",
-    "Start":          "wasStartedBy",
-    "Usage":          "used",
-    "End":            "wasEndedBy",
-    "Invalidation":   "wasInvalidatedBy",
-    "Generation":     "wasGeneratedBy",
-    "Specialization": "specializationOf",
-    "Alternate":      "alternateOf",
-    "Membership":     "hadMember",
-    "Delegation":     "delegation",
-    "Mention":        "mentionOf",
-    "Influence":      "wasInfluencedBy",
-    "Revision":       "wasRevisionOf",
-    "Quotation":      "wasQuotedFrom"
-}
+def encode_qualified_name(q_name: QualifiedName):
+    """Encode a Qualified Name as a string.
+
+    Ignore colon and prefix if no prefix is given."""
+    prefix = f"{q_name.namespace.prefix}:" if q_name.namespace.prefix else ""
+    return f"{prefix}{q_name.localpart}"
 
 
-def import_graph(auth, graph):
-    spawn_templates(max_key_sets(graph))
-    n4j = connect(auth)
-    for node in nodes(graph):
-        n4j.push(node)
-    return
+@dataclass
+class Template:
+    """Template information container for Graph Object creation."""
+    name: str
+    property_keys: Set[str]
+
+    def __post_init__(self):
+        """Add necessary keys, 'id' and 'prov:type'."""
+        if not self.property_keys:
+            return
+        self.property_keys.update(["id", "prov:type"])
 
 
-def max_key_sets(graph):
-    MaxKeySets = namedtuple("MaximumKeySets", "activity agent entity")
-    activity = agent = entity = set()
-    for element in graph.flattened().get_records(ProvElement):
-        for key, _ in element.attributes:
-            if isinstance(element, ProvActivity):
-                activity.add(f"{key.namespace.prefix}:{key.localpart}")
-            elif isinstance(element, ProvAgent):
-                agent.add(f"{key.namespace.prefix}:{key.localpart}")
-            elif isinstance(element, ProvEntity):
-                entity.add(f"{key.namespace.prefix}:{key.localpart}")
-    return MaxKeySets(activity, agent, entity)
+class TemplateBuilder:
+    """Handles template information computation."""
+
+    @staticmethod
+    def get_template(graph: ProvDocument, prov_type: Union[Type[ProvActivity], Type[ProvAgent], Type[ProvEntity]]):
+        """Extract property keys from a PROV graph.
+
+        Compute the maximal set of keys for vertices of type *prov_type*.
+        All of them have to be known for Graph Object creation."""
+        keys = set()
+        for element in graph.get_records(prov_type):
+            for key, _ in element.attributes:
+                keys.add(encode_qualified_name(key))
+        return Template(PROV_N_MAP[prov_type._prov_type].capitalize(), keys)
 
 
-def spawn_templates(max_key_sets):
-    globals()["Activity"] = create_template("Activity", max_key_sets.activity)
-    globals()["Agent"]    = create_template("Agent",    max_key_sets.agent)
-    globals()["Entity"]   = create_template("Entity",   max_key_sets.entity)
-    return
+class GraphObjectClassFactory:
+    """Handles Graph Object creation."""
+
+    @staticmethod
+    def create_class(graph: ProvDocument, prov_type: Union[Type[ProvActivity], Type[ProvAgent], Type[ProvEntity]]):
+        """Create Graph Objects from template information.
+
+        Register properties for all known vertex attribute keys as well as necessary keys 'id' & 'prov:type'.
+        Register relation hooks for all known PROV relations.
+        Add '__init__' to created types."""
+        template = TemplateBuilder.get_template(graph, prov_type)
+
+        def ns_callback(namespace):
+            def __init__(self, **kwargs):
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+            cls_dict = {}
+            cls_dict.update({"__init__": __init__, "__primarykey__": "id"})
+            cls_dict.update({relation: RelatedTo(GraphObject, relation) for relation in PROV_N_MAP.values()})
+            cls_dict.update({key: Property(key) for key in template.property_keys})
+            namespace.update(cls_dict)
+
+        return types.new_class(template.name, (GraphObject, ), {}, ns_callback)
 
 
-def create_template(class_name, keys):
-    "Construct GraphObject class definitions dynamically"
-    attributes = dict()
-    keys.update(["id", "prov:type"])
-    for key in keys:
-        attributes[key] = Property(key)
-    for relation in PROV_RELATIONS.values():
-        attributes[relation] = Related(GraphObject, relation)
-    def __init__(self, *args, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-    attributes["__init__"] = __init__
-    attributes["__primarykey__"] = "id"
-    new_class = type(class_name, (GraphObject,), attributes)
-    return new_class
+class Importer:
+    """Handles Neo4j graph imports."""
 
+    def __init__(self, authentication: Dict[str, Any]):
+        self._nodes = {}
+        self.n4j = None
+        self.connect(authentication)
 
-def connect(auth):
-    print(auth)
-    n4j = Graph(f"bolt://{auth['host']}/", user=auth["username"], password=auth["password"])
-    print(n4j)
-    n4j.schema.create_uniqueness_constraint("Activity", "id")
-    n4j.schema.create_uniqueness_constraint("Agent",    "id")
-    n4j.schema.create_uniqueness_constraint("Entity",   "id")
-    return n4j
+    def import_graph(self, graph: ProvDocument):
+        """Import a PROV graph to Neo4j."""
+        self._add_elements(graph)
+        self._add_relations(graph)
+        for node in self._nodes.values():
+            if not self.n4j:
+                continue
+            self.n4j.push(node)
 
+    def connect(self, authentication: Dict[str, Any]):
+        """Connect to a Neo4j instance."""
+        host: str = f"bolt://{authentication['host']}/"
+        self.n4j = Graph(host, user=authentication["username"], password=authentication["password"])
+        self.n4j.schema.create_uniqueness_constraint("Activity", "id")
+        self.n4j.schema.create_uniqueness_constraint("Agent", "id")
+        self.n4j.schema.create_uniqueness_constraint("Entity", "id")
 
-def nodes(graph):
-    nodes = dict()
+    def _add_elements(self, graph: ProvDocument):
+        """Add *graph* vertices to self._nodes."""
+        activity = GraphObjectClassFactory.create_class(graph, ProvActivity)
+        agent = GraphObjectClassFactory.create_class(graph, ProvAgent)
+        entity = GraphObjectClassFactory.create_class(graph, ProvEntity)
 
-    for element in set(graph.flattened().get_records(ProvElement)):
-        raw_id = element.identifier
-        encoded_id = f"{raw_id.namespace.prefix}:{raw_id.localpart}"
-        encoded_attributes = {"id": encoded_id}
-        encoded_attributes.update(encode(element.attributes))
-        # choose template according to element type
-        if isinstance(element, ProvActivity):
-            graph_obj = Activity
-        elif isinstance(element, ProvAgent):
-            graph_obj = Agent
-        elif isinstance(element, ProvEntity):
-            graph_obj = Entity
-        nodes[encoded_id] = graph_obj(**encoded_attributes)
-
-    for relation in set(graph.flattened().get_records(ProvRelation)):
-        source, target, *_ = tuple(relation.formal_attributes)
-        relation_type = PROV_RELATIONS[relation.get_type().localpart]
-
-        source_id = f"{source[1].namespace.prefix}:{source[1].localpart}"
-        target_id = f"{target[1].namespace.prefix}:{target[1].localpart}"
-
-        source = nodes[source_id]
-        target = nodes[target_id]
-        getattr(source, relation_type).update(target)
-
-    for bundle in graph.bundles:
-        # TODO: layered bundles, entities for contained bundles
-        bundle_id = f"{bundle.identifier.namespace.prefix}:{bundle.identifier.localpart}"
-        nodes[bundle_id] = Entity(**{"id": bundle_id, "prov:type": "bundle"})
-        for element in bundle.get_records(ProvElement):
+        for element in graph.get_records(ProvElement):
             raw_id = element.identifier
-            encoded_id = f"{raw_id.namespace.prefix}:{raw_id.localpart}"
-            source = nodes[encoded_id]
-            target = nodes[bundle_id]
-            getattr(source, "wasAttributedTo").update(target)
+            enc_id = encode_qualified_name(raw_id)
 
-    return nodes.values()
+            enc_attributes = {}
+            enc_attributes.update({"id": enc_id})
+            enc_attributes.update(self._encode(dict(element.attributes)))
 
+            graph_obj = {
+                ProvActivity: activity,
+                ProvAgent: agent,
+                ProvEntity: entity
+            }[type(element)](**enc_attributes)
 
-def encode(attributes):
-    for key, value in attributes:
-        if isinstance(key, QualifiedName):
-            key = f"{key.namespace.prefix}:{key.localpart}"
-        if isinstance(value, QualifiedName):
-            value = f"{value.namespace.prefix}:{value.localpart}"
-        elif isinstance(value, (date, datetime)):
-            value = DateTime.from_iso_format(value.isoformat())
-        elif isinstance(value, time):
-            value = Time.from_iso_format(value.isoformat())
-        elif isinstance(value, timedelta):
-            value = Duration(seconds=value.total_seconds())
-        yield key, value
+            self._nodes[enc_id] = graph_obj
+
+    def _add_relations(self, graph: ProvDocument):
+        """Add *graph* edges to self._nodes."""
+        for relation in graph.get_records(ProvRelation):
+            (_, source), (_, target) = relation.formal_attributes[:2]
+            relation_type = PROV_N_MAP[relation.get_type()]
+
+            source_id = encode_qualified_name(source)
+            target_id = encode_qualified_name(target)
+
+            source = self._nodes[source_id]
+            target = self._nodes[target_id]
+
+            getattr(source, relation_type).add(target)
+
+    @staticmethod
+    def _encode(attributes: Dict[QualifiedName, Any]):
+        """Encode dictionary of vertex attributes.
+
+        Convert datetime objects to NeoTime objects.
+        Convert qualified names to strings."""
+        enc_attributes = {}
+        for key, value in attributes.items():
+            if isinstance(key, QualifiedName):
+                key = encode_qualified_name(key)
+            if isinstance(value, QualifiedName):
+                value = encode_qualified_name(value)
+            elif isinstance(value, (date, datetime)):
+                value = DateTime.from_iso_format(value.isoformat())
+            elif isinstance(value, time):
+                value = Time.from_iso_format(value.isoformat())
+            elif isinstance(value, timedelta):
+                value = Duration(seconds=value.total_seconds())
+            enc_attributes[key] = value
+        return enc_attributes
 
 
 if __name__ == "__main__":

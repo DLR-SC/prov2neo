@@ -4,7 +4,7 @@ import sys
 
 from prov.model import ProvDocument
 
-from p2n import import_graph
+from p2n import Importer
 
 
 def parse_args():
@@ -19,16 +19,20 @@ def parse_args():
 
 def main():
     args = parse_args()
-
+    graph, infile = None, None
     if os.path.exists(args.input):
         infile = args.input
-        graph = ProvDocument.deserialize(source=infile, format=args.format)
     elif not args.input:
         infile = sys.stdin
-        graph = ProvDocument.deserialize(source=infile, format=args.format)
+
+    graph = ProvDocument.deserialize(source=infile, format=args.format)
     auth = {"host": f"{args.host}", "username": f"{args.username}", "password": f"{args.password}"}
-    import_graph(auth, graph)
+
+    imp = Importer(auth)
+    imp.import_graph(graph)
 
 
 if __name__ == "__main__":
     main()
+
+
