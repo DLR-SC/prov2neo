@@ -1,4 +1,4 @@
-# WIP: prov2neo - Import W3C PROV graphs into Neo4j.
+# WIP: prov2neo — Import W3C PROV graphs into Neo4j.
 Faster graph imports than comparable libs such as prov-db-connector.  
 Implementation is tailored towards the provenance model used by gitlab2prov.  
 Therefore it does not serve as a general purpose provenance tool.  
@@ -17,7 +17,7 @@ As of right now (April 2020) it seems that py2neo doesn't support Neo4j 4.x yet.
 
 #### Usage
 ```python
-from prov.model import ProvDocument()
+from prov.model import ProvDocument
 from p2n import Importer
 
 graph = ProvDocument()
