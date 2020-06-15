@@ -25,11 +25,18 @@ def main():
     elif not args.input:
         infile = sys.stdin
 
-    graph = ProvDocument.deserialize(source=infile, format=args.format)
     auth = {"host": f"{args.host}", "username": f"{args.username}", "password": f"{args.password}"}
 
     imp = Importer(auth)
-    imp.import_graph(graph)
+
+    graph = ProvDocument.deserialize(source=infile, format=args.format)
+    
+    if graph.has_bundles():
+        bundles = graph.bundles
+        print(list(bundles)[0])
+        imp.import_graph(list(bundles)[0])
+    else:
+        imp.import_graph(graph)
 
 
 if __name__ == "__main__":
