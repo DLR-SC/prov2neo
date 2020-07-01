@@ -4,7 +4,7 @@ import sys
 
 from prov.model import ProvDocument
 
-from p2n import Importer
+from core import Importer
 
 
 def parse_args():
