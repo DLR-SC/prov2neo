@@ -13,12 +13,31 @@ Named Graphs to the property graph model employed by Neo4j. Implementing such a
 model remains to future work.
 
 prov2neo has only been tested against **Neo4j 3.5**.  
-As of right now (April 2020) it seems that py2neo doesn't support Neo4j 4.x yet.
+Support for Neo4j below Version 4.0 is available on its own branch.
 
-#### Usage
+#### Command Line Usage
+```bash
+usage: prov2neo [-h] [-f {provn,json,rdf,xml}] -i INPUT [-H HOST] [-u USERNAME] [-p PASSWORD]
+
+Import W3C PROV graphs to neo4j.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f {provn,json,rdf,xml}, --format {provn,json,rdf,xml}
+                        input prov format
+  -i INPUT, --input INPUT
+                        input file, for stdin use '.'
+  -H HOST, --host HOST  neo4j instance host
+  -u USERNAME, --username USERNAME
+                        neo4j instance username
+  -p PASSWORD, --password PASSWORD
+                        neo4j instance password
+```
+
+#### Lib Usage
 ```python
 from prov.model import ProvDocument
-from p2n import Importer
+from prov2neo.core import Importer
 
 graph = ProvDocument()
 graph.add_namespace("ex", "https://example.org/")
