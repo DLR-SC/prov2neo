@@ -15,6 +15,8 @@ def main():
     parser.add_argument("-H", "--host", help="neo4j instance host")
     parser.add_argument("-u", "--username", help="neo4j instance username")
     parser.add_argument("-p", "--password", help="neo4j instance password")
+    parser.add_argument("-n", "--name", help="Neo4j database name", default=None)
+    return parser.parse_args()
 
     args = parser.parse_args()
     graph, infile = None, None
@@ -24,7 +26,7 @@ def main():
         infile = args.input
     
     graph = ProvDocument.deserialize(source=infile, format=args.format)
-    auth = {"host": f"{args.host}", "username": f"{args.username}", "password": f"{args.password}"}
+    auth = {"host": f"{args.host}", "username": f"{args.username}", "password": f"{args.password}", "name": f"{args.name}"}
 
     imp = Importer(auth)
     imp.import_graph(graph.flattened())
