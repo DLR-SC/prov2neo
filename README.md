@@ -16,7 +16,7 @@ prov2neo has only been tested against **Neo4j 3.5**.
 Support for Neo4j below Version 4.0 is available on its own branch.
 
 #### Command Line Usage
-```bash
+```
 usage: prov2neo [-h] [-f {provn,json,rdf,xml}] -i INPUT [-H HOST] [-u USERNAME] [-p PASSWORD]
 
 Import W3C PROV graphs to neo4j.
