@@ -84,12 +84,12 @@ class Importer:
 
     def import_graph(self, graph: ProvDocument):
         """Import a PROV graph to Neo4j."""
+        if not self.n4j:
+            return
         self._add_elements(graph)
         self._add_relations(graph)
         for node in self._nodes.values():
-            if not self.n4j:
-                continue
-            self.n4j.push(node)
+            self.n4j.create(node)
 
     def connect(self, authentication: Dict[str, Any]):
         """Connect to a Neo4j instance."""
