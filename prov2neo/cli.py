@@ -24,11 +24,17 @@ def main():
     elif os.path.exists(args.input):
         infile = args.input
     
-    graph = ProvDocument.deserialize(source=infile, format=args.format)
-    auth = {"host": f"{args.host}", "username": f"{args.username}", "password": f"{args.password}", "name": f"{args.name}"}
+    graph = ProvDocument.deserialize(source=infile, format=args.format).flattened().unified()
 
-    imp = Importer(auth)
-    imp.import_graph(graph.flattened())
+    auth = {
+        "host":     f"{args.host}",
+        "user":     f"{args.username}",
+        "password": f"{args.password}"
+    }
+
+    imp = Importer()
+    imp.connect(**auth)
+    imp.import_graph(graph)
 
 
 if __name__ == "__main__":
