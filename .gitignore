@@ -1,2 +1,5 @@
 */__pycache__
 *.provn
+build
+dist
+prov2neo.egg-info
