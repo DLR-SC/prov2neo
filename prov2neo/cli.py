@@ -15,7 +15,7 @@ def main():
     parser.add_argument("-H", "--host", help="neo4j instance host")
     parser.add_argument("-u", "--username", help="neo4j instance username")
     parser.add_argument("-p", "--password", help="neo4j instance password")
-    parser.add_argument("-n", "--name", help="Neo4j database name", default=None)
+    parser.add_argument("-n", "--name", help="Neo4j database name", default="neo4j")
 
     args = parser.parse_args()
     graph, infile = None, None
