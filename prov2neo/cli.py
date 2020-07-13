@@ -29,7 +29,8 @@ def main():
     auth = {
         "host":     f"{args.host}",
         "user":     f"{args.username}",
-        "password": f"{args.password}"
+        "password": f"{args.password}",
+        "name":     f"{args.name}"
     }
 
     imp = Importer()
