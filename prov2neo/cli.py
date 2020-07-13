@@ -4,7 +4,7 @@ import sys
 
 from prov.model import ProvDocument
 
-from .core import Importer
+from prov2neo.core import Importer
 
 
 def main():
