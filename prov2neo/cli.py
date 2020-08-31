@@ -16,6 +16,11 @@ def main():
     parser.add_argument("-u", "--username", help="neo4j instance username")
     parser.add_argument("-p", "--password", help="neo4j instance password")
     parser.add_argument("-n", "--name", help="Neo4j database name", default="neo4j")
+    parser.add_argument(
+        "-s", "--scheme", 
+        help="connection scheme to use when connecting to neo4j", 
+        choices=["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"],
+        default="bolt+s")
 
     args = parser.parse_args()
     graph, infile = None, None
@@ -30,7 +35,8 @@ def main():
         "host":     f"{args.host}",
         "user":     f"{args.username}",
         "password": f"{args.password}",
-        "name":     f"{args.name}"
+        "name":     f"{args.name}",
+        "scheme":   f"{args.scheme}"
     }
 
     imp = Importer()

@@ -47,9 +47,9 @@ class Importer:
         self.edge_list = []
         self.BATCH_SIZE = 200
 
-    def connect(self, host: str, user: str, password: str, name: str):
+    def connect(self, host: str, user: str, password: str, name: str, scheme: str):
         """Establish connection to neo4j instance."""
-        self.graph_db = Graph(host, user=user, password=password, name=name)
+        self.graph_db = Graph(host=host, scheme=scheme, user=user, password=password, name=name)
         self.graph_db.schema.create_uniqueness_constraint("Activity", "id")
         self.graph_db.schema.create_uniqueness_constraint("Agent", "id")
         self.graph_db.schema.create_uniqueness_constraint("Entity", "id")
