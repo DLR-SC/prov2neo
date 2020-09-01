@@ -51,9 +51,9 @@ class Importer:
         """Establish connection to neo4j instance."""
         secure = scheme not in ["bolt", "http"] # enforce TLS for protocols that require it
         self.graph_db = Graph(address=address, scheme=scheme, user=user, password=password, name=name, secure=secure)
-        self.graph_db.schema.create_uniqueness_constraint("Activity", "id")
-        self.graph_db.schema.create_uniqueness_constraint("Agent", "id")
-        self.graph_db.schema.create_uniqueness_constraint("Entity", "id")
+        #self.graph_db.schema.create_uniqueness_constraint("Activity", "id")
+        #self.graph_db.schema.create_uniqueness_constraint("Agent", "id")
+        #self.graph_db.schema.create_uniqueness_constraint("Entity", "id")
 
     def import_graph(self, graph: ProvDocument):
         """Import a PROV graph to neo4j.
