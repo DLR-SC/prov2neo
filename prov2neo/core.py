@@ -49,7 +49,8 @@ class Importer:
 
     def connect(self, address: str, user: str, password: str, name: str, scheme: str):
         """Establish connection to neo4j instance."""
-        self.graph_db = Graph(address=address, scheme=scheme, user=user, password=password, name=name)
+        secure = scheme not in ["bolt", "http"] # enforce TLS for protocols that require it
+        self.graph_db = Graph(address=address, scheme=scheme, user=user, password=password, name=name, secure=secure)
         self.graph_db.schema.create_uniqueness_constraint("Activity", "id")
         self.graph_db.schema.create_uniqueness_constraint("Agent", "id")
         self.graph_db.schema.create_uniqueness_constraint("Entity", "id")
