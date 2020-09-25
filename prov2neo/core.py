@@ -6,8 +6,9 @@ from neotime import DateTime, Duration, Time
 from prov.identifier import QualifiedName
 from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvDocument,
                         ProvElement, ProvEntity, ProvRelation)
-from py2neo import Graph
+from py2neo import Graph, GraphService
 from py2neo.data import Node, Relationship
+from py2neo.database.work import ClientError
 
 
 def encode_attributes(attributes: Dict[Any, Any]):
@@ -48,17 +49,54 @@ class Importer:
         self.BATCH_SIZE = 200
 
     def connect(self, address: str, user: str, password: str, name: str, scheme: str):
-        """Establish connection to neo4j instance."""
+        """Establishes connection to neo4j instance.
+        
+        Parameters
+        ----------
+        address : str
+            The address of the neo4j server in the following format: 
+            <host>:<port>
+        user : str
+            The username used to authenticate the user connecting to the neo4j 
+            instance.
+        password : str
+            The password used to authenticate the user connecting to the neo4j 
+            instance.
+        name : str
+            The name of the database that the connection is supposed to be 
+            established to. If the server contains no database of this name, 
+            a new one is created. Creating databases is only possible for 
+            enterprise neo4j versions 4.0 and above.
+        scheme : str
+            The name of the connection protocol that should be used for the 
+            database connection. Valid protocols/URI schemes are: 
+            ["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"].
+        """
         secure = scheme not in ["bolt", "http"] # enforce TLS for protocols that require it
-        self.graph_db = Graph(address=address, scheme=scheme, user=user, password=password, name=name, secure=secure)
-        #self.graph_db.schema.create_uniqueness_constraint("Activity", "id")
-        #self.graph_db.schema.create_uniqueness_constraint("Agent", "id")
-        #self.graph_db.schema.create_uniqueness_constraint("Entity", "id")
+
+        graph_service = GraphService(address=address, scheme=scheme, user=user, password=password, secure=secure)
+        
+        if name not in graph_service.keys(): # check if db exists already, if not try to create it
+            try:
+                system = graph_service.system_graph
+                system.run(f"CREATE DATABASE {name} IF NOT EXISTS;") 
+            except ClientError as e:
+                print("WARNING: ", e)
+                
+        self.graph_db = graph_service[name]
+
+    def add_constraints(self):
+        """Add uniqueness constraints to the property key 'id' for all basic PROV types."""
+        if self.graph_db is None:
+            return
+        for label in ["Activity", "Agent", "Entity"]:
+            property_key = "id"
+            self.graph_db.schema.create_uniqueness_constraint(label, property_key)
 
     def import_graph(self, graph: ProvDocument):
         """Import a PROV graph to neo4j.
 
-        Run transactions of size"""
+        Run transactions of size *self.BATCH_SIZE*"""
         if self.graph_db is None:
             return
         self.node_dict = self._convert_nodes(graph)
@@ -68,7 +106,7 @@ class Importer:
 
     @staticmethod
     def chunks(it: Iterable[Any], size: int):
-        """Return *n* sized chunks of iterable *it*."""
+        """Return *size* sized chunks of iterable *it*."""
         it = iter(it)
         return iter(lambda: tuple(islice(it, size)), ())
 
