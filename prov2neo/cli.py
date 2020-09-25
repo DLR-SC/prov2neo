@@ -11,7 +11,7 @@ def main():
     "Command line script entry point."
     parser = argparse.ArgumentParser("prov2neo", description="Import W3C PROV graphs to neo4j.")
     parser.add_argument("-f", "--format", help="input prov format", choices=["provn", "json", "rdf", "xml"], default="json")
-    parser.add_argument("-i", "--input", help="input file, for stdin use '.'", required=True)
+    parser.add_argument("-i", "--input", help="input file, for stdin use '.'", default=None)
     parser.add_argument("-a", "--address", help="neo4j instance address")
     parser.add_argument("-u", "--username", help="neo4j instance username")
     parser.add_argument("-p", "--password", help="neo4j instance password")
@@ -23,25 +23,30 @@ def main():
         default="bolt+s")
 
     args = parser.parse_args()
-    graph, infile = None, None
-    if args.input == ".":
+    infile = None
+    if args.input is None:
+        # print help msg and exit if missing input source
+        print(parser.format_help())
+        return
+    elif args.input == ".":
+        # stdin as input source
         infile = sys.stdin
     elif os.path.exists(args.input):
+        # filepath as input source
         infile = args.input
     
-    graph = ProvDocument.deserialize(source=infile, format=args.format).flattened().unified()
+    deserialized_infile = ProvDocument.deserialize(source=infile, format=args.format).flattened()
 
+    importer = Importer()
     auth = {
-        "address":     f"{args.address}",
+        "address":  f"{args.address}",
         "user":     f"{args.username}",
         "password": f"{args.password}",
         "name":     f"{args.name}",
         "scheme":   f"{args.scheme}"
     }
-
-    imp = Importer()
-    imp.connect(**auth)
-    imp.import_graph(graph)
+    importer.connect(**auth)
+    importer.import_graph(deserialized_infile)
 
 
 if __name__ == "__main__":
