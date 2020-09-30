@@ -1,14 +1,22 @@
+from collections import deque
 from datetime import date, datetime, time, timedelta
 from itertools import islice
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, Union
 
 from neotime import DateTime, Duration, Time
 from prov.identifier import QualifiedName
-from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvDocument,
+from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvDocument, ProvBundle,
                         ProvElement, ProvEntity, ProvRelation)
-from py2neo import Graph, GraphService
+from py2neo import Graph, GraphService, ClientError
 from py2neo.data import Node, Relationship
-from py2neo.database.work import ClientError
+
+
+NODE_LABELS = {
+    ProvActivity: "Activity",
+    ProvAgent: "Agent",
+    ProvBundle: "Bundle",
+    ProvEntity: "Entity"
+}
 
 
 def encode_attributes(attributes: Dict[Any, Any]):
@@ -89,7 +97,7 @@ class Importer:
         """Add uniqueness constraints to the property key 'id' for all basic PROV types."""
         if self.graph_db is None:
             return
-        for label in ["Activity", "Agent", "Entity"]:
+        for label in ["Activity", "Agent", "Entity", "Bundle"]:
             property_key = "id"
             self.graph_db.schema.create_uniqueness_constraint(label, property_key)
 
@@ -99,8 +107,8 @@ class Importer:
         Run transactions of size *self.BATCH_SIZE*"""
         if self.graph_db is None:
             return
-        self.node_dict = self._convert_nodes(graph)
-        self.edge_list = self._convert_edges(graph)
+        self.node_dict, self.edge_list = self._convert_nodes(graph)
+        self.edge_list.extend(self._convert_edges(graph))
         self._execute_batch_transactions(self.node_dict.values())
         self._execute_batch_transactions(self.edge_list)
 
@@ -120,21 +128,37 @@ class Importer:
 
     def _convert_nodes(self, graph: ProvDocument):
         """Convert prov elements to neo4j nodes."""
-        nodes = {}
-        for element in graph.get_records(ProvElement):
-            encoded_id = encode_qualified_name(element.identifier)
-            attributes = encode_attributes(dict(element.attributes))
-            attributes["id"] = encoded_id
-            label = {
-                ProvActivity: "Activity",
-                ProvAgent: "Agent",
-                ProvEntity: "Entity"
-            }[type(element)]
-            nodes[encoded_id] = Node(label, **attributes)
-        return nodes
+        nodes, relations = dict(), list()
+        queue = deque([(None, graph.bundles), (None, graph.get_records(ProvElement))])
+        while queue:
+            prev_layer, curr_layer = queue.popleft()
+            for element in curr_layer:
+                node_id, node = self._create_node(element)
+                nodes[node_id] = node
+                if prev_layer is not None:
+                    target = nodes[prev_layer]
+                    relation_type = "bundledIn"
+                    relations.append(Relationship(node, relation_type, target))
+                if not isinstance(element, ProvBundle):
+                    continue
+                queue.append((node_id, element.bundles))
+                queue.append((node_id, element.get_records(ProvElement)))
+        return nodes, relations
+
+    @staticmethod
+    def _create_node(element: Union[ProvElement, ProvBundle]):
+        """Create py2neo.Node from ProvElement or ProvBundle"""
+        encoded_id = encode_qualified_name(element.identifier)
+        attributes = {} if isinstance(element, ProvBundle) else encode_attributes(dict(element.attributes))
+        attributes["id"] = encoded_id
+        labels = [NODE_LABELS[type(element)]]
+        if attributes.get("prov:type") == "prov:Bundle":
+            labels.append("Bundle")
+        return encoded_id, Node(*labels, **attributes)
 
     def _convert_edges(self, graph: ProvDocument):
         """Convert prov relations to neo4j relationships/edges."""
+        graph = graph.flattened()
         edges = []
         for relation in graph.get_records(ProvRelation):
             (_, source_id), (_, target_id), *attributes = relation.attributes

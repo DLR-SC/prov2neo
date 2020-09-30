@@ -35,7 +35,7 @@ def main():
         # filepath as input source
         infile = args.input
     
-    deserialized_infile = ProvDocument.deserialize(source=infile, format=args.format).flattened()
+    deserialized_infile = ProvDocument.deserialize(source=infile, format=args.format)
 
     importer = Importer()
     auth = {
@@ -51,5 +51,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
