@@ -1,31 +1,39 @@
-from collections import deque
+from collections import deque, defaultdict
 from datetime import date, datetime, time, timedelta
 from itertools import islice
-from typing import Any, Dict, Iterable, Union
+from typing import Any, Iterable, Union, Tuple, List, Dict
 
 from neotime import DateTime, Duration, Time
 from prov.identifier import QualifiedName
-from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvDocument, ProvBundle,
-                        ProvElement, ProvEntity, ProvRelation)
+from prov.model import (
+    PROV_N_MAP,
+    ProvActivity,
+    ProvAgent,
+    ProvDocument,
+    ProvBundle,
+    ProvElement,
+    ProvEntity,
+    ProvRelation,
+)
 from py2neo import Graph, GraphService, ClientError
 from py2neo.data import Node, Relationship
 
 
 NODE_LABELS = {
-    ProvActivity: "Activity",
-    ProvAgent: "Agent",
-    ProvBundle: "Bundle",
-    ProvEntity: "Entity"
+    ProvActivity: "prov:Activity",
+    ProvAgent: "prov:Agent",
+    ProvBundle: "prov:Bundle",
+    ProvEntity: "prov:Entity",
 }
 
 
-def encode_attributes(attributes: Dict[Any, Any]):
-    """Encode attribute dictionary.
+def encode_attributes(attributes: List[Tuple[Any, Any]]):
+    """Encode attribute key, value tuple list.
 
     Convert datetime objects to NeoTime objects.
     Convert qualified names to strings."""
-    enc_attrs = {}
-    for key, value in attributes.items():
+    enc_attrs = defaultdict(list)
+    for key, value in attributes:
         if isinstance(key, QualifiedName):
             key = encode_qualified_name(key)
         if isinstance(value, QualifiedName):
@@ -36,8 +44,8 @@ def encode_attributes(attributes: Dict[Any, Any]):
             value = Time.from_iso_format(value.isoformat())
         elif isinstance(value, timedelta):
             value = Duration(seconds=value.total_seconds())
-        enc_attrs[key] = value
-    return enc_attrs
+        enc_attrs[key].append(value)
+    return {key: (vs[0] if len(vs) <= 1 else vs) for key, vs in enc_attrs.items()}
 
 
 def encode_qualified_name(q_name: QualifiedName):
@@ -50,6 +58,7 @@ def encode_qualified_name(q_name: QualifiedName):
 
 class Importer:
     """Import provenance graphs to neo4j."""
+
     def __init__(self):
         self.graph_db = None
         self.node_dict = {}
@@ -58,47 +67,54 @@ class Importer:
 
     def connect(self, address: str, user: str, password: str, name: str, scheme: str):
         """Establishes connection to neo4j instance.
-        
+
         Parameters
         ----------
         address : str
-            The address of the neo4j server in the following format: 
+            The address of the neo4j server in the following format:
             <host>:<port>
         user : str
-            The username used to authenticate the user connecting to the neo4j 
+            The username used to authenticate the user connecting to the neo4j
             instance.
         password : str
-            The password used to authenticate the user connecting to the neo4j 
+            The password used to authenticate the user connecting to the neo4j
             instance.
         name : str
-            The name of the database that the connection is supposed to be 
-            established to. If the server contains no database of this name, 
-            a new one is created. Creating databases is only possible for 
+            The name of the database that the connection is supposed to be
+            established to. If the server contains no database of this name,
+            a new one is created. Creating databases is only possible for
             enterprise neo4j versions 4.0 and above.
         scheme : str
-            The name of the connection protocol that should be used for the 
-            database connection. Valid protocols/URI schemes are: 
+            The name of the connection protocol that should be used for the
+            database connection. Valid protocols/URI schemes are:
             ["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"].
         """
-        secure = scheme not in ["bolt", "http"] # enforce TLS for protocols that require it
+        # enforce TLS for protocols that require it
+        secure = scheme not in ["bolt", "http"]
+        graph_service = GraphService(
+            address=address, scheme=scheme, user=user, password=password, secure=secure
+        )
 
-        graph_service = GraphService(address=address, scheme=scheme, user=user, password=password, secure=secure)
-        
-        if name not in graph_service.keys(): # check if db exists already, if not try to create it
+        if name not in graph_service:
+            # check if db exists already, if not try to create it
             try:
                 system = graph_service.system_graph
-                system.run(f"CREATE DATABASE {name} IF NOT EXISTS;") 
+                system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
             except ClientError as e:
                 print("WARNING: ", e)
-                
+
         self.graph_db = graph_service[name]
+        self.add_constraints()
 
     def add_constraints(self):
         """Add uniqueness constraints to the property key 'id' for all basic PROV types."""
         if self.graph_db is None:
             return
-        for label in ["Activity", "Agent", "Entity", "Bundle"]:
+        self.graph_db.schema.graph = self.graph_db
+        for label in NODE_LABELS.values():
             property_key = "id"
+            if property_key in self.graph_db.schema.get_uniqueness_constraints(label):
+                continue  # constraint already exists, therefore skip this one
             self.graph_db.schema.create_uniqueness_constraint(label, property_key)
 
     def import_graph(self, graph: ProvDocument):
@@ -127,33 +143,74 @@ class Importer:
             tx.commit()
 
     def _convert_nodes(self, graph: ProvDocument):
-        """Convert prov elements to neo4j nodes."""
-        nodes, relations = dict(), list()
+        """Convert prov elements to neo4j nodes.
+
+        Explore prov graph layer by layer using bfs based order.
+        Create nodes for each bundle and connect them to the nodes that they contain."""
+        self.node_dict, relations = dict(), list()
         queue = deque([(None, graph.bundles), (None, graph.get_records(ProvElement))])
         while queue:
             prev_layer, curr_layer = queue.popleft()
             for element in curr_layer:
-                node_id, node = self._create_node(element)
-                nodes[node_id] = node
+                node_id, node = self._create_or_update_node(element)
+                self.node_dict[node_id] = node
                 if prev_layer is not None:
-                    target = nodes[prev_layer]
+                    target = self.node_dict[prev_layer]
                     relation_type = "bundledIn"
                     relations.append(Relationship(node, relation_type, target))
                 if not isinstance(element, ProvBundle):
                     continue
                 queue.append((node_id, element.bundles))
                 queue.append((node_id, element.get_records(ProvElement)))
-        return nodes, relations
+        return self.node_dict, relations
 
-    @staticmethod
-    def _create_node(element: Union[ProvElement, ProvBundle]):
-        """Create py2neo.Node from ProvElement or ProvBundle"""
+    def _update_existing_node(
+        self, node_id: str, labels: List[Any], attributes: Dict[str, Any]
+    ):
+        """Update labels and property values of existing node.
+
+        Update the labels and the properties of an existing node,
+        if there is new information from another node declaration of the same id."""
+        node = self.node_dict[node_id]
+        # add missing label if node already exists
+        missing_labels = labels - set(node.labels)
+        for label in missing_labels:
+            node.add_label(label)
+        # update attribute values of existing node
+        for key, values in attributes.items():
+            old_attrs = node[key]
+            updated = (
+                set(old_attrs) if isinstance(old_attrs, list) else set([old_attrs])
+            )
+            if isinstance(values, list):
+                updated.update(values)
+            else:
+                updated.add(values)
+            updated = [v for v in updated if v is not None]
+            node[key] = updated[0] if len(updated) <= 1 else updated
+        return node
+
+    def _create_or_update_node(self, element: Union[ProvElement, ProvBundle]):
+        """Create or update py2neo node from a given prov element/bundle.
+
+        Check whether node already exists, if yes then update the existing one.
+        If no, then create a new one.
+        """
         encoded_id = encode_qualified_name(element.identifier)
-        attributes = {} if isinstance(element, ProvBundle) else encode_attributes(dict(element.attributes))
-        attributes["id"] = encoded_id
-        labels = [NODE_LABELS[type(element)]]
-        if attributes.get("prov:type") == "prov:Bundle":
-            labels.append("Bundle")
+        attributes = {"id": encoded_id}
+        if isinstance(element, ProvBundle):
+            attributes["prov:type"] = "prov:Bundle"
+        else:
+            attributes.update(encode_attributes(element.attributes))
+        labels = set([NODE_LABELS[type(element)]])
+        prov_types = attributes.get("prov:type")
+        if prov_types:
+            labels.update(prov_types if isinstance(prov_types, list) else [prov_types])
+        if encoded_id in self.node_dict:
+            # update existing node
+            updated_node = self._update_existing_node(encoded_id, labels, attributes)
+            return encoded_id, updated_node
+        # create new node
         return encoded_id, Node(*labels, **attributes)
 
     def _convert_edges(self, graph: ProvDocument):
