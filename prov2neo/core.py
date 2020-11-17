@@ -110,7 +110,6 @@ class Importer:
         """Add uniqueness constraints to the property key 'id' for all basic PROV types."""
         if self.graph_db is None:
             return
-        self.graph_db.schema.graph = self.graph_db
         for label in NODE_LABELS.values():
             property_key = "id"
             if property_key in self.graph_db.schema.get_uniqueness_constraints(label):
