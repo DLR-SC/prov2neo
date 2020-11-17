@@ -6,8 +6,7 @@
 **Note: Project status is WIP, expect breaking changes!**
 
 ## Known Limitations :traffic_light:
-- `prov2neo` does not support PROV bundles yet. See #6 for implementation progress.
-- `prov2neo` does not support multivalued properties yet.
+- `prov2neo` does not support the import of PROV graphs that miss some node definitions! (See #7 for progress.)
 
 ## Installation
 
