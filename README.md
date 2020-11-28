@@ -6,7 +6,7 @@
 **Note: Project status is WIP, expect breaking changes!**
 
 ## Known Limitations :traffic_light:
-- `prov2neo` does not support the import of PROV graphs that miss some node definitions! (See #7 for progress.)
+- `prov2neo` does not support the import of PROV graphs that use RDF Literals as the start or end point of relations. (See #8 for progress.)
 
 ## Installation
 
