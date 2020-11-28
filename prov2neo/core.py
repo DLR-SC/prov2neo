@@ -1,23 +1,17 @@
-from collections import deque, defaultdict
+from collections import defaultdict, deque
 from datetime import date, datetime, time, timedelta
-from itertools import islice
-from typing import Any, Iterable, Union, Tuple, List, Dict
+from typing import Any, Dict, Iterable, List, Tuple
 
 from neotime import DateTime, Duration, Time
 from prov.identifier import QualifiedName
-from prov.model import (
-    PROV_N_MAP,
-    ProvActivity,
-    ProvAgent,
-    ProvDocument,
-    ProvBundle,
-    ProvElement,
-    ProvEntity,
-    ProvRelation,
-)
-from py2neo import Graph, GraphService, ClientError
+from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvBundle,
+                        ProvDocument, ProvElement, ProvEntity, ProvRelation)
+from py2neo import ClientError, Graph, GraphService
 from py2neo.data import Node, Relationship
 
+# Default label for each node that is imported by prov2neo
+# Also used as a placeholder for nodes without formal node definitions
+PROV2NEO_NODE = "prov2neo:node"
 
 NODE_LABELS = {
     ProvActivity: "prov:Activity",
@@ -45,15 +39,19 @@ def encode_attributes(attributes: List[Tuple[Any, Any]]):
         elif isinstance(value, timedelta):
             value = Duration(seconds=value.total_seconds())
         enc_attrs[key].append(value)
-    return {key: (vs[0] if len(vs) <= 1 else vs) for key, vs in enc_attrs.items()}
+
+    for key, values in enc_attrs.items():
+        if len(values) == 1:
+            enc_attrs[key] = values[0]
+            continue
+        enc_attrs[key] = values
+    return enc_attrs
 
 
 def encode_qualified_name(q_name: QualifiedName):
-    """String encode QualifiedName *q_name*.
-
-    Ignore namespace prefix if it does not exist."""
-    prefix = f"{q_name.namespace.prefix}:" if q_name.namespace.prefix else ""
-    return f"{prefix}{q_name.localpart}"
+    """String encode QualifiedName *q_name*."""
+    # provn repr adds single quotes, remove them by [1:-1]
+    return q_name.provn_representation()[1:-1]
 
 
 class Importer:
@@ -94,27 +92,23 @@ class Importer:
         graph_service = GraphService(
             address=address, scheme=scheme, user=user, password=password, secure=secure
         )
-
+        # check if db exists already, if not try to create it
         if name not in graph_service:
-            # check if db exists already, if not try to create it
             try:
                 system = graph_service.system_graph
                 system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
             except ClientError as e:
                 print("WARNING: ", e)
-
         self.graph_db = graph_service[name]
-        self.add_constraints()
+        self.add_constraints(self.graph_db)
 
-    def add_constraints(self):
+    def add_constraints(self, graph_db: Graph):
         """Add uniqueness constraints to the property key 'id' for all basic PROV types."""
-        if self.graph_db is None:
+        if graph_db is None:
             return
         for label in NODE_LABELS.values():
-            property_key = "id"
-            if property_key in self.graph_db.schema.get_uniqueness_constraints(label):
-                continue  # constraint already exists, therefore skip this one
-            self.graph_db.schema.create_uniqueness_constraint(label, property_key)
+            if "id" not in graph_db.schema.get_uniqueness_constraints(label):
+                graph_db.schema.create_uniqueness_constraint(label, "id")
 
     def import_graph(self, graph: ProvDocument):
         """Import a PROV graph to neo4j.
@@ -122,97 +116,145 @@ class Importer:
         Run transactions of size *self.BATCH_SIZE*"""
         if self.graph_db is None:
             return
-        self.node_dict, self.edge_list = self._convert_nodes(graph)
-        self.edge_list.extend(self._convert_edges(graph))
-        self._execute_batch_transactions(self.node_dict.values())
-        self._execute_batch_transactions(self.edge_list)
+        self.node_dict, self.edge_list = self.convert_nodes(graph)
+        self.edge_list.extend(self.convert_edges(graph))
+        self.exec_txs(self.node_dict.values())
+        self.exec_txs(self.edge_list)
 
     @staticmethod
-    def chunks(it: Iterable[Any], size: int):
-        """Return *size* sized chunks of iterable *it*."""
-        it = iter(it)
-        return iter(lambda: tuple(islice(it, size)), ())
+    def chunks(it: Iterable[Any], step: int):
+        """Return *step* sized chunks of iterable *it*."""
+        lst = list(it)
+        for start in range(0, len(lst), step):
+            stop = start + step
+            yield lst[start:stop]
 
-    def _execute_batch_transactions(self, items: Iterable[Any]):
-        """Execute transactions for all batches in *batches*."""
-        for batch in self.chunks(items, self.BATCH_SIZE):
+    def exec_txs(self, nodes_or_rels: Iterable[Any]):
+        """Push nodes and relationships to neo4j db using batched transactions."""
+        for batch in self.chunks(nodes_or_rels, step=self.BATCH_SIZE):
             tx = self.graph_db.begin()
             for item in batch:
-                tx.create(item)
+                if isinstance(item, Node):
+                    item.add_label(PROV2NEO_NODE)
+                tx.merge(item, primary_label=PROV2NEO_NODE, primary_key="id")
             tx.commit()
 
-    def _convert_nodes(self, graph: ProvDocument):
-        """Convert prov elements to neo4j nodes.
 
-        Explore prov graph layer by layer using bfs based order.
-        Create nodes for each bundle and connect them to the nodes that they contain."""
-        self.node_dict, relations = dict(), list()
-        queue = deque([(None, graph.bundles), (None, graph.get_records(ProvElement))])
-        while queue:
-            prev_layer, curr_layer = queue.popleft()
-            for element in curr_layer:
-                node_id, node = self._create_or_update_node(element)
-                self.node_dict[node_id] = node
-                if prev_layer is not None:
-                    target = self.node_dict[prev_layer]
-                    relation_type = "bundledIn"
-                    relations.append(Relationship(node, relation_type, target))
-                if not isinstance(element, ProvBundle):
-                    continue
-                queue.append((node_id, element.bundles))
-                queue.append((node_id, element.get_records(ProvElement)))
-        return self.node_dict, relations
+    @staticmethod
+    def bfs_walker(graph: ProvDocument):
+        """Walk through provenance *graph* by bfs.
 
-    def _update_existing_node(
-        self, node_id: str, labels: List[Any], attributes: Dict[str, Any]
-    ):
-        """Update labels and property values of existing node.
+        Yield discovered nodes (ProvElement) and their corresponding
+        parent bundle id. The queue is initialised with the bundles
+        and elements contained within *graph*'s uppermost layer.
 
-        Update the labels and the properties of an existing node,
-        if there is new information from another node declaration of the same id."""
-        node = self.node_dict[node_id]
-        # add missing label if node already exists
-        missing_labels = labels - set(node.labels)
-        for label in missing_labels:
-            node.add_label(label)
-        # update attribute values of existing node
-        for key, values in attributes.items():
-            old_attrs = node[key]
-            updated = (
-                set(old_attrs) if isinstance(old_attrs, list) else set([old_attrs])
-            )
-            if isinstance(values, list):
-                updated.update(values)
-            else:
-                updated.add(values)
-            updated = [v for v in updated if v is not None]
-            node[key] = updated[0] if len(updated) <= 1 else updated
-        return node
-
-    def _create_or_update_node(self, element: Union[ProvElement, ProvBundle]):
-        """Create or update py2neo node from a given prov element/bundle.
-
-        Check whether node already exists, if yes then update the existing one.
-        If no, then create a new one.
+        The queue consists of tuples (A, B) where A is a bundle identifier and B is either:
+            . an iterable of ProvElement's or
+            . an iterable of ProvBundle's
         """
-        encoded_id = encode_qualified_name(element.identifier)
-        attributes = {"id": encoded_id}
-        if isinstance(element, ProvBundle):
-            attributes["prov:type"] = "prov:Bundle"
-        else:
-            attributes.update(encode_attributes(element.attributes))
-        labels = set([NODE_LABELS[type(element)]])
-        prov_types = attributes.get("prov:type")
-        if prov_types:
-            labels.update(prov_types if isinstance(prov_types, list) else [prov_types])
-        if encoded_id in self.node_dict:
-            # update existing node
-            updated_node = self._update_existing_node(encoded_id, labels, attributes)
-            return encoded_id, updated_node
-        # create new node
-        return encoded_id, Node(*labels, **attributes)
+        queue = deque([(None, graph.get_records(ProvElement)), (None, graph.bundles)])
+        while queue:
+            parent_bundle_id, elements = queue.popleft()
+            for elem in elements:
+                if isinstance(elem, ProvBundle):
+                    bundle_id = encode_qualified_name(elem.identifier)
+                    queue.append((bundle_id, elem.get_records(ProvElement)))
+                    queue.append((bundle_id, elem.bundles))
+                yield parent_bundle_id, elem
 
-    def _convert_edges(self, graph: ProvDocument):
+    def convert_nodes(self, graph: ProvDocument):
+        """Convert all PROV nodes contained in *graph* to py2neo.Node's.
+
+        Explore the graph using bfs, creating or updating nodes along the way.
+        Supports multi-valued properties.
+        """
+        node_dict, relationships = {}, []
+
+        for bundle_id, node in self.bfs_walker(graph):
+            node_id = encode_qualified_name(node.identifier)
+
+            if node_id not in node_dict:
+                # node does not exist yet
+                # create node and add it to node dictionary
+                if isinstance(node, ProvBundle):
+                    new_node = Node("prov:Bundle", **{"id": node_id, "prov:type": "prov:Bundle"})
+                else:
+                    new_node = self.create_node(node)
+                node_dict[node_id] = new_node
+            else:
+                # node exists already
+                existing = node_dict[node_id]
+                if isinstance(node, ProvBundle):
+                    update = Node("prov:Bundle", **{"id": node_id, "prov:type": "prov:Bundle"})
+                else:
+                    update = self.create_node(node)
+                # update node labels and attributes
+                node_dict[node_id] = self.update_node(existing, update)
+
+            if bundle_id is not None:
+                # create preliminary bundle node
+                bundle = Node(
+                    "prov:Bundle", **{"id": bundle_id, "prov:type": "prov:Bundle"}
+                )
+                if bundle_id not in node_dict:
+                    # bundle node does not exist yet
+                    # add bundle node to node dictionary
+                    node_dict[bundle_id] = bundle
+                else:
+                    # bundle node does exist already
+                    # update bundle node labels and attributes
+                    existing = node_dict[bundle_id]
+                    node_dict[bundle_id] = self.update_node(existing, bundle)
+                # create relationship between bundle and node
+                source, target = node_dict[node_id], node_dict[bundle_id]
+                relationships.append(Relationship(source, "bundledIn", target))
+        return node_dict, relationships
+
+    @staticmethod
+    def create_node(node: ProvElement):
+        """Create a py2neo.Node from a prov.model.ProvElement."""
+        node_id = encode_qualified_name(node.identifier)
+        node_label = NODE_LABELS[type(node)]
+
+        attributes = encode_attributes(node.attributes)
+        attributes["id"] = node_id
+
+        if "prov:type" in attributes:
+            labels = attributes["prov:type"]
+            labels = labels if isinstance(labels, list) else [labels]
+            labels.append(node_label)
+            attributes["prov:type"] = list(set(labels))
+        else:
+            attributes["prov:type"] = node_label
+
+        labels = attributes["prov:type"]
+        labels = labels if isinstance(labels, list) else [labels]
+        return Node(*labels, **attributes)
+
+    @staticmethod
+    def update_node(node_a: Node, node_b: Node):
+        """Update labels and attributes of node_a with those of node_b."""
+        missing_labels = set(node_b.labels) - set(node_a.labels)
+        # add missing labels
+        for label in missing_labels:
+            node_a.add_label(label)
+
+        for key, values in node_b.items():
+            if key in node_a:
+                a_values = node_a[key]
+                a_values = a_values if isinstance(a_values, list) else [a_values]
+
+                b_values = node_b[key]
+                b_values = b_values if isinstance(b_values, list) else [b_values]
+
+                a_values.extend(b_values)
+                a_values = list(set(a_values))
+                node_a[key] = a_values[0] if len(a_values) == 1 else a_values
+            else:
+                node_a[key] = values
+        return node_a
+
+    def convert_edges(self, graph: ProvDocument):
         """Convert prov relations to neo4j relationships/edges."""
         graph = graph.flattened()
         edges = []
@@ -220,16 +262,22 @@ class Importer:
             (_, source_id), (_, target_id), *attributes = relation.attributes
             relation_type = PROV_N_MAP[relation.get_type()]
 
-            encoded_source_id = encode_qualified_name(source_id)
-            encoded_target_id = encode_qualified_name(target_id)
+            enc_source_id = encode_qualified_name(source_id)
+            enc_target_id = encode_qualified_name(target_id)
 
-            source = self.node_dict[encoded_source_id]
-            target = self.node_dict[encoded_target_id]
+            if enc_source_id in self.node_dict:
+                source = self.node_dict[enc_source_id]
+            else:
+                source = Node(PROV2NEO_NODE, id=enc_source_id)
+                self.node_dict[enc_source_id] = source
 
-            relationship = Relationship(source, relation_type, target)
+            if enc_target_id in self.node_dict:
+                target = self.node_dict[enc_target_id]
+            else:
+                target = Node(PROV2NEO_NODE, id=enc_target_id)
+                self.node_dict[enc_target_id] = target
+
+            enc_attributes = encode_attributes(attributes)
+            relationship = Relationship(source, relation_type, target, **enc_attributes)
             edges.append(relationship)
         return edges
-
-
-if __name__ == "__main__":
-    pass
