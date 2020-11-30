@@ -4,8 +4,9 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 from neotime import DateTime, Duration, Time
 from prov.identifier import QualifiedName
-from prov.model import (PROV_N_MAP, ProvActivity, ProvAgent, ProvBundle,
-                        ProvDocument, ProvElement, ProvEntity, ProvRelation)
+from prov.model import (PROV_N_MAP, Identifier, Literal, ProvActivity,
+                        ProvAgent, ProvBundle, ProvDocument, ProvElement,
+                        ProvEntity, ProvRelation)
 from py2neo import ClientError, Graph, GraphService
 from py2neo.data import Node, Relationship
 
@@ -32,12 +33,20 @@ def encode_attributes(attributes: List[Tuple[Any, Any]]):
             key = encode_qualified_name(key)
         if isinstance(value, QualifiedName):
             value = encode_qualified_name(value)
-        elif isinstance(value, (date, datetime)):
-            value = DateTime.from_iso_format(value.isoformat())
+        elif isinstance(value, date):
+            value = DateTime.from_native(value)
+        elif isinstance(value, datetime):
+            value = DateTime.from_native(value)
         elif isinstance(value, time):
-            value = Time.from_iso_format(value.isoformat())
+            value = Time.from_native(value)
         elif isinstance(value, timedelta):
             value = Duration(seconds=value.total_seconds())
+        elif isinstance(value, Literal):
+            # TODO: Do we want to save the PROV-N Representation in Neo4j?
+            value = value.provn_representation()
+        elif isinstance(value, Identifier):
+            # TODO: Do we want to save a string or the PROV-N Representation in Neo4j?
+            value = str(value)
         enc_attrs[key].append(value)
 
     for key, values in enc_attrs.items():
@@ -138,7 +147,6 @@ class Importer:
                     item.add_label(PROV2NEO_NODE)
                 tx.merge(item, primary_label=PROV2NEO_NODE, primary_key="id")
             tx.commit()
-
 
     @staticmethod
     def bfs_walker(graph: ProvDocument):
