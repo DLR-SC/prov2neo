@@ -267,25 +267,36 @@ class Importer:
         graph = graph.flattened()
         edges = []
         for relation in graph.get_records(ProvRelation):
-            (_, source_id), (_, target_id), *attributes = relation.attributes
+            (_, source_id), (_, target_id) = relation.formal_attributes[:2]
+            attributes = [*relation.formal_attributes[2:], *relation.extra_attributes]
             relation_type = PROV_N_MAP[relation.get_type()]
 
-            enc_source_id = encode_qualified_name(source_id)
-            enc_target_id = encode_qualified_name(target_id)
-
-            if enc_source_id in self.node_dict:
-                source = self.node_dict[enc_source_id]
+            if isinstance(target_id, QualifiedName):
+                # map to {Node} - Relation - {Node}
+                enc_source_id = encode_qualified_name(source_id)
+                enc_target_id = encode_qualified_name(target_id)
+                source = self.get_node(enc_source_id)
+                target = self.get_node(enc_target_id)
+                enc_attributes = encode_attributes(attributes)
+                relationship = Relationship(
+                    source, relation_type, target, **enc_attributes
+                )
+                edges.append(relationship)
             else:
-                source = Node(PROV2NEO_NODE, id=enc_source_id)
-                self.node_dict[enc_source_id] = source
-
-            if enc_target_id in self.node_dict:
-                target = self.node_dict[enc_target_id]
-            else:
-                target = Node(PROV2NEO_NODE, id=enc_target_id)
-                self.node_dict[enc_target_id] = target
-
-            enc_attributes = encode_attributes(attributes)
-            relationship = Relationship(source, relation_type, target, **enc_attributes)
-            edges.append(relationship)
+                # map to Node{Key: Value}
+                enc_source_id = encode_qualified_name(source_id)
+                source = self.get_node(enc_source_id)
+                enc_attributes = encode_attributes([(relation_type, target_id)])
+                update = Node(PROV2NEO_NODE, **enc_attributes)
+                self.node_dict[enc_source_id] = self.update_node(source, update)
         return edges
+
+    def get_node(self, node_id: str):
+        """Get a node by it's string encoded id from *self.node_dict*.
+
+        If the node doesn't exist, it will be created and added to *self.node_dict*."""
+        default = Node(PROV2NEO_NODE, **{"id": node_id})
+        if node_id not in self.node_dict:
+            self.node_dict[node_id] = default
+            return default
+        return self.node_dict[node_id]
