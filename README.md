@@ -65,7 +65,8 @@ client.connect(
 )
 
 # import the PROV graph
-client.import_graph(graph)```
+client.import_graph(graph)
+```
 
 ## Contributing
 Merge and Pull requests are welcome!  
