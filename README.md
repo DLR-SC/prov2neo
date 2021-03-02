@@ -47,23 +47,21 @@ optional arguments:
 #### As a Python Lib
 ```python
 from prov.model import ProvDocument
-
 from prov2neo.client import Client
 
+# read graph from JSON serialization
 graph = ProvDocument.deserialize(source="examples/horsemeat.json", format="json")
 
-# create a client
+# create a prov2neo client
 client = Client()
-
 # connect to the neo4j instance
 client.connect(
     address="localhost:7687",
     user="jane doe",
     password="**redacted**",
     name="database name",
-    scheme="bolt+s"
+    scheme="bolt"
 )
-
 # import the PROV graph
 client.import_graph(graph)
 ```
