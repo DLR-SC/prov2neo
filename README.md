@@ -48,7 +48,7 @@ optional arguments:
 ```python
 from prov.model import ProvDocument
 
-from prov2neo import Client
+from prov2neo.client import Client
 
 graph = ProvDocument.deserialize(source="examples/horsemeat.json", format="json")
 
