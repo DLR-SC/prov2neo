@@ -6,7 +6,7 @@
 **Note: Project status is WIP, expect breaking changes!**
 
 ## Known Limitations :traffic_light:
-- `prov2neo` does not support the import of PROV graphs that use RDF Literals as the start or end point of relations. (See #8 for progress.)
+- None known as of right now.
 
 ## Installation
 
@@ -46,21 +46,26 @@ optional arguments:
 
 #### As a Python Lib
 ```python
-from prov2neo import Importer
 from prov.model import ProvDocument
 
-example = ProvDocument.deserialize(source="examples/horsemeat.json", format="json")
-authentication = {
-    "address": "localhost:7687",
-    "name": "database_name",
-    "user": "john doe",
-    "password": "**redacted**",
-}
+from prov2neo import Client
 
-importer = Importer()              # create Importer instance
-importer.connect(**authentication) # connect to graph database
-importer.import_graph(graph)       # import provenance graph
-```
+graph = ProvDocument.deserialize(source="examples/horsemeat.json", format="json")
+
+# create a client
+client = Client()
+
+# connect to the neo4j instance
+client.connect(
+    address="localhost:7687",
+    user="jane doe",
+    password="**redacted**",
+    name="database name",
+    scheme="bolt+s"
+)
+
+# import the PROV graph
+client.import_graph(graph)```
 
 ## Contributing
 Merge and Pull requests are welcome!  
