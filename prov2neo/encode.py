@@ -19,18 +19,19 @@ from py2neo.data import Node, Relationship
 
 
 # constant strings
-PROV_ACTIVITY = "prov:Activity"
-PROV_AGENT = "prov:Agent"
-PROV_BUNDLE = "prov:Bundle"
-PROV_ENTITY = "prov:Entity"
+PROV_ACTIVITY = "Activity"
+PROV_AGENT = "Agent"
+PROV_BUNDLE = "Bundle"
+PROV_ENTITY = "Entity"
 PROV_TYPE = "prov:type"
 PROV2NEO_ID = "prov2neo:identifier"
+PROV2NEO_LABEL = "prov2neo:label"
 PROV2NEO_BUNDLED_IN = "prov2neo:bundledIn"
 
 
 # constant tuples
-PROV2NEO_NODE = (PROV_TYPE, "prov2neo:node")
-PROV2NEO_EDGE = (PROV_TYPE, "prov2neo:edge")
+PROV2NEO_NODE = (PROV2NEO_LABEL, "prov2neo:node")
+PROV2NEO_EDGE = (PROV2NEO_LABEL, "prov2neo:edge")
 
 
 # constant mappings
@@ -142,7 +143,7 @@ def NodePropertySet(node=None, qualified_name=None):
         return {PROV2NEO_NODE, (PROV2NEO_ID, str_id(qualified_name))}
     properties = {} if type(node) is ProvBundle else node.attributes
     ident = (PROV2NEO_ID, str_id(node.identifier))
-    label = (PROV_TYPE, node_label(node))
+    label = (PROV2NEO_LABEL, node_label(node))
     return {PROV2NEO_NODE, label, ident, *properties}
 
 
@@ -182,7 +183,7 @@ def EdgePropertySet(edge=None):
     """
     if edge is None:
         return {PROV2NEO_EDGE}
-    label = (PROV_TYPE, edge_label(edge))
+    label = (PROV2NEO_LABEL, edge_label(edge))
     properties = [*edge.attributes[2:], *edge.extra_attributes]
     return {PROV2NEO_EDGE, label, *properties}
 
@@ -384,7 +385,12 @@ def to_py2neo_node(property_set):
         The property set to be turned into a py2neo Node
     """
     property_dict = to_property_dict(property_set)
-    labels = property_dict[PROV_TYPE]
+    # get node labels, key PROV2NEO_LABEL
+    labels = property_dict[PROV2NEO_LABEL]
+    # delete the key PROV2NEO_LABEL
+    del property_dict[PROV2NEO_LABEL]
+    if type(labels) is not list:
+        return Node(labels, **property_dict)
     return Node(*labels, **property_dict)
 
 
