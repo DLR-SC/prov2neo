@@ -13,7 +13,7 @@ setup(
     description='Import W3C PROV graphs into Neo4j using py2neo\'s OGM.',
     keywords=['w3c prov', 'neo4j', 'graph import'],
     url='https://gitlab.dlr.de/provenance/prov2neo',
-    install_requires=['py2neo==2020.1.0', 'prov==2.0.0', 'neotime==1.7.4'],
+    install_requires=['py2neo==2021.0.1', 'prov==2.0.0', 'neotime==1.7.4'],
     entry_points={'console_scripts': ['prov2neo = prov2neo.cli:main']},
     license='MIT',
     classifiers=[
