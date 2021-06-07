@@ -1,7 +1,6 @@
 from prov.model import ProvDocument
-from py2neo import ClientError, GraphService, Subgraph
+from py2neo import ClientError, GraphService
 
-from prov2neo.decode import decode_graph
 from prov2neo.encode import (
     NODE_LABELS,
     PROV2NEO_ID,
@@ -11,16 +10,19 @@ from prov2neo.encode import (
 
 
 class Client:
-    """prov2neo client used to connect to a neo4j instance, import and export PROV graphs.
+    """prov2neo client used to connect to a neo4j instance, import,
+    and export PROV graphs.
 
     Supports:
         - PROV graph import [PROV -> Neo4j]
         - PROV graph export [Neo4j -> PROV]
     """
+
     def __init__(self):
         self.graph_db = None
 
-    def connect(self, address: str, user: str, password: str, name: str, scheme: str) -> None:
+    def connect(self, address: str, user: str, password: str,
+                name: str, scheme: str) -> None:
         """Establishes connection to a neo4j instance.
 
         Parameters
@@ -101,7 +103,8 @@ class Client:
         # merge all nodes & edges into self.graph_db
         # merge updates already existing nodes
         # and creates new ones if necessary
-        tx.merge(encoded_graph, primary_label=primary_label, primary_key=primary_key)
+        tx.merge(encoded_graph, primary_label=primary_label,
+                 primary_key=primary_key)
         tx.commit()
 
     def export_graph(self):
