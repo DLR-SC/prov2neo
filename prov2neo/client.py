@@ -55,7 +55,7 @@ class Client:
             secure=enforce_tls
         )
 
-        if not name in graph_service.keys():
+        if name not in graph_service.keys():
             try:
                 system = graph_service.system_graph
                 system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
