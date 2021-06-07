@@ -13,17 +13,28 @@ def create_parser():
     Params:
     -------
     """
-    parser = argparse.ArgumentParser("prov2neo", description="Import W3C PROV graphs to neo4j.")
-    parser.add_argument("-f", "--format", help="input prov format", choices=["provn", "json", "rdf", "xml"], default="json",)
-    parser.add_argument("-i", "--input", help="input file, '.' for stdin", default=None)
-    parser.add_argument("-a", "--address", help="neo4j instance address")
-    parser.add_argument("-u", "--username", help="neo4j instance username")
-    parser.add_argument("-p", "--password", help="neo4j instance password")
-    parser.add_argument("-n", "--name", help="neo4j database name", default="neo4j")
-    parser.add_argument("-s", "--scheme", help="connection scheme to use when connecting to neo4j",
-        choices=["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"],
-        default="bolt+s",
-    )
+    parser = argparse.ArgumentParser("prov2neo",
+                                     description="Import W3C PROV graphs to neo4j.")
+    parser.add_argument("-f", "--format",
+                        help="input prov format",
+                        choices=["provn", "json", "rdf", "xml"],
+                        default="json",)
+    parser.add_argument("-i", "--input",
+                        help="input file, '.' for stdin",
+                        default=None)
+    parser.add_argument("-a", "--address",
+                        help="neo4j instance address")
+    parser.add_argument("-u", "--username",
+                        help="neo4j instance username")
+    parser.add_argument("-p", "--password",
+                        help="neo4j instance password")
+    parser.add_argument("-n", "--name",
+                        help="neo4j database name", default="neo4j")
+    parser.add_argument("-s", "--scheme",
+                        help="connection scheme to use when connecting to neo4j",
+                        choices=["bolt", "bolt+s", "bolt+ssc",
+                                 "http", "https", "http+s", "http+ssc"],
+                        default="bolt+s")
     return parser
 
 
