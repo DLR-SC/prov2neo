@@ -40,7 +40,7 @@ class Client:
     def create_database(service: GraphService, name: str):
         try:
             system = service.system_graph
-            system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
+            system.run(f"CREATE DATABASE $name IF NOT EXISTS;", parameters={"name": name})
         except ClientError as cex:
             raise cex
         except DatabaseError as dbex:
