@@ -1,5 +1,5 @@
 from prov.model import ProvDocument
-from py2neo import ClientError, GraphService
+from py2neo import ClientError, GraphService, DatabaseError
 
 from prov2neo.encode import (
     NODE_LABELS,
@@ -7,6 +7,21 @@ from prov2neo.encode import (
     PROV2NEO_NODE,
     encode_graph
 )
+
+class ConnectionError(Exception):
+    pass
+
+
+class Scheme:
+    def __init__(self, name: str):
+        SUPPORTED = ["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"]
+        if name not in SUPPORTED:
+            msg = f"'{name}' is not a supported connection scheme."
+            raise ValueError(msg)
+        self.name = name
+    @property
+    def enforce_tls(self):
+        return self.name not in ["bolt", "http"]
 
 
 class Client:
@@ -20,6 +35,16 @@ class Client:
 
     def __init__(self):
         self.graph_db = None
+
+    @staticmethod
+    def create_database(service: GraphService, name: str):
+        try:
+            system = service.system_graph
+            system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
+        except ClientError as cex:
+            raise cex
+        except DatabaseError as dbex:
+            raise dbex from None
 
     def connect(self, address: str, user: str, password: str,
                 name: str, scheme: str) -> None:
@@ -45,25 +70,29 @@ class Client:
             The name of the connection protocol that should be used for the
             database connection. Valid protocols/URI schemes are:
             ["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"].
+
+        Raises
+        ----------
+        ConnectionUnavailable: Raised when a connection cannot be acquired.
+        ValueError: Raised when an unsupported connection scheme is used.
+        DatabaseError: Raised when the neo4j version does not support database creation.
         """
-        enforce_tls = scheme not in ["bolt", "http"]
-        graph_service = GraphService(
-            address=address,
-            scheme=scheme,
-            user=user,
-            password=password,
-            secure=enforce_tls
-        )
+        scheme = Scheme(scheme)
+        try:
+            service = GraphService(
+                address=address,
+                scheme=scheme.name,
+                user=user,
+                password=password,
+                secure=scheme.enforce_tls
+            )
+        except Exception as ex:
+            msg = f"Failed to establish a connection to '{scheme.name}://{address}' with user '{user}' and the specified password."
+            raise ConnectionError(msg) from None
 
-        if name not in graph_service.keys():
-            try:
-                system = graph_service.system_graph
-                system.run(f"CREATE DATABASE {name} IF NOT EXISTS;")
-            except ClientError as e:
-                print(f"ClientError occured in: {self.connect.__name__}")
-                print(f"Error Message: {e}")
-
-        self.graph_db = graph_service[name]
+        if name not in service.keys():
+            self.create_database(service, name)
+        self.graph_db = service[name]
         self.add_uniqueness_constraints()
 
     def add_uniqueness_constraints(self) -> None:
