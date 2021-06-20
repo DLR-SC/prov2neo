@@ -2,9 +2,10 @@ import argparse
 import os
 import sys
 
+from py2neo import ClientError, DatabaseError
 from prov.model import ProvDocument
 
-from prov2neo.client import Client
+from prov2neo.client import Client, ConnectionError
 
 
 def create_parser():
@@ -58,45 +59,47 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    # print help and exit if no input file is given
     if args.input is None:
         print(parser.format_help())
         return
-
-    # set stdin as input file
     if args.input == ".":
         in_fp = sys.stdin
-
-    # check if input file path exists
     if os.path.exists(args.input):
         in_fp = args.input
-    # if not, print help and exit
     else:
         print("Invalid file path {args.input}")
         print(parser.format_help())
         return
 
-    # try to deserialize the PROV graph from the input file
     try:
         graph = ProvDocument.deserialize(source=in_fp, format=args.format)
-    # if exception occurs print its message followed by help then exit
-    except Exception as e:
-        print(e)
+    except:
+        print(f"Failed to deserialize {in_fp}.")
         print(parser.format_help())
         return
 
-    # create a prov2neo client
     client = Client()
-    # connect to the neo4j instance
-    client.connect(
-        address=args.address,
-        user=args.username,
-        password=args.password,
-        name=args.name,
-        scheme=args.scheme,
-    )
-    # import the PROV graph
-    client.import_graph(graph)
+    try:
+        client.connect(
+            address=args.address,
+            user=args.username,
+            password=args.password,
+            name=args.name,
+            scheme=args.scheme,
+        )
+    except DatabaseError as e:
+        print(f"{str(e)}")
+        print("Hint: Check if your Neo4j version supports the creation of new databases. (The Community Edition does not!)")
+    except ClientError as e:
+        print(f"{str(e)}")
+    except ConnectionError as e:
+        print(f"{str(e)}")
+        print("Hint: Check if you specified the correct database address, username and password.")
+    except ValueError as e:
+        print(f"{str(e)}")
+        print("Hint: Check if you specified a supported connection scheme.")
+    else:
+        client.import_graph(graph)
 
 
 if __name__ == "__main__":
