@@ -1,9 +1,9 @@
-# WIP: `prov2neo` - Import W3C PROV graphs to Neo4j
+# prov2neo — Import W3C PROV graphs to Neo4j
+
+[![License: MIT](https://img.shields.io/github/license/dlr-sc/gitlab2prov?label=License)](https://opensource.org/licenses/MIT) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 
 `prov2neo` is a Python library for importing W3C PROV graphs into neo4j.  
 `prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector).
-
-**Note: Project status is WIP, expect breaking changes!**
 
 ## Known Limitations :traffic_light:
 - None known as of right now.
@@ -71,4 +71,4 @@ Merge and Pull requests are welcome!
 For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
-TBD
+MIT
