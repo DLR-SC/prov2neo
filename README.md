@@ -1,12 +1,10 @@
 # prov2neo — Import W3C PROV Documents to Neo4j
 
-[![License: MIT](https://img.shields.io/github/license/dlr-sc/gitlab2prov?label=License)](https://opensource.org/licenses/MIT) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/github/license/dlr-sc/gitlab2prov?label=License)](https://opensource.org/licenses/MIT) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![PyPI version fury.io](https://badge.fury.io/py/prov2neo.svg)](https://pypi.python.org/pypi/prov2neo/) [![Upload Python Package](https://github.com/DLR-SC/prov2neo/actions/workflows/python-publish.yml/badge.svg?branch=main)](https://github.com/DLR-SC/prov2neo/actions/workflows/python-publish.yml) [![DOI](https://zenodo.org/badge/379262717.svg)](https://zenodo.org/badge/latestdoi/379262717)
+
 
 `prov2neo` is a Python library for importing W3C PROV documents into [Neo4j](https://neo4j.com/).  
 `prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector).
-
-## Known Limitations :traffic_light:
-- None known as of right now.
 
 ## Installation
 
