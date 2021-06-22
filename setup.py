@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name='prov2neo',
-    version='0.2',
+    version='1.0',
     author='Claas de Boer',
     author_email='claas.deboer@dlr.de',
     packages=['prov2neo'],
@@ -23,7 +23,7 @@ setup(
     entry_points={'console_scripts': ['prov2neo = prov2neo.cli:main']},
     license='MIT',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: MIT License',
