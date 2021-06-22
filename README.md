@@ -1,8 +1,8 @@
-# prov2neo — Import W3C PROV graphs to Neo4j
+# prov2neo — Import W3C PROV Documents to Neo4j
 
 [![License: MIT](https://img.shields.io/github/license/dlr-sc/gitlab2prov?label=License)](https://opensource.org/licenses/MIT) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 
-`prov2neo` is a Python library for importing W3C PROV graphs into neo4j.  
+`prov2neo` is a Python library for importing W3C PROV documents into [Neo4j](https://neo4j.com/).  
 `prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector).
 
 ## Known Limitations :traffic_light:
@@ -10,22 +10,28 @@
 
 ## Installation
 
-Clone the project and use the provided `setup.py` to install `prov2neo`.
+Clone the project and use the provided `setup.py` to install `prov2neo` locally
 
 ```bash
 python setup.py install --user
 ```
 
+Or install releases from PyPI:
+
+```bash
+pip install prov2neo
+```
+
 ## Usage
 
-`prov2neo` can be used both as a command line script and as a Python lib.
+prov2neo can be used both as a command line script and as a Python lib.
 
 #### As a Command Line Script
 ```
 usage: prov2neo [-h] [-f {provn,json,rdf,xml}] [-i INPUT] [-a ADDRESS] [-u USERNAME] [-p PASSWORD] [-n NAME]
                 [-s {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}]
 
-Import W3C PROV graphs to neo4j.
+Import W3C PROV documents to neo4j.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -65,6 +71,13 @@ client.connect(
 # import the PROV graph
 client.import_graph(graph)
 ```
+
+prov2neo supports formats that the [`prov`](https://github.com/trungdong/prov) library provides:
+* [PROV-N](http://www.w3.org/TR/prov-n/)
+* [PROV-O](http://www.w3.org/TR/prov-o/) (RDF)
+* [PROV-XML](http://www.w3.org/TR/prov-xml/)
+* [PROV-JSON](http://www.w3.org/Submission/prov-json/)
+
 
 ## Contributing
 Merge and Pull requests are welcome!  

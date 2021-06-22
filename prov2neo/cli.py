@@ -15,7 +15,7 @@ def create_parser():
     -------
     """
     parser = argparse.ArgumentParser("prov2neo",
-                                     description="Import W3C PROV graphs to Neo4j.")
+                                     description="Import W3C PROV documents to Neo4j.")
     parser.add_argument("-f", "--format",
                         help="input PROV format",
                         choices=["provn", "json", "rdf", "xml"],
