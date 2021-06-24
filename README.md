@@ -24,7 +24,8 @@ pip install prov2neo
 
 prov2neo can be used both as a command line script and as a Python lib.
 
-#### As a Command Line Script
+### As a Command Line Script
+
 ```
 usage: prov2neo [-h] [-f {provn,json,rdf,xml}] [-i INPUT [INPUT ...]] [-a ADDRESS]
                 [-u USERNAME] [-p PASSWORD] [-n NAME]
@@ -49,7 +50,8 @@ optional arguments:
                         connection scheme to use when connecting to Neo4j
 ```
 
-#### As a Python Lib
+### As a Python Lib
+
 ```python
 from prov.model import ProvDocument
 from prov2neo.client import Client
@@ -72,15 +74,17 @@ client.import_graph(graph)
 ```
 
 prov2neo supports formats that the [`prov`](https://github.com/trungdong/prov) library provides:
+
 * [PROV-N](http://www.w3.org/TR/prov-n/)
 * [PROV-O](http://www.w3.org/TR/prov-o/) (RDF)
 * [PROV-XML](http://www.w3.org/TR/prov-xml/)
 * [PROV-JSON](http://www.w3.org/Submission/prov-json/)
 
-
 ## Contributing
+
 Merge and Pull requests are welcome!  
 For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
+
 MIT
