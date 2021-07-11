@@ -21,16 +21,16 @@ def create_parser():
                         choices=["provn", "json", "rdf", "xml"],
                         default="json",)
     parser.add_argument("-i", "--input",
-                        help="input file, '.' for stdin",
-                        default=None)
+                        help="input files, use '.' for stdin",
+                        nargs="+", default=None)
     parser.add_argument("-a", "--address",
-                        help="Neo4j instance address")
+                        help="Neo4j address")
     parser.add_argument("-u", "--username",
-                        help="Neo4j instance username")
+                        help="Neo4j username")
     parser.add_argument("-p", "--password",
-                        help="Neo4j instance password")
+                        help="Neo4j password")
     parser.add_argument("-n", "--name",
-                        help="Neo4j database name", default="neo4j")
+                        help="Neo4j target database name", default="neo4j")
     parser.add_argument("-s", "--scheme",
                         help="connection scheme to use when connecting to Neo4j",
                         choices=["bolt", "bolt+s", "bolt+ssc",
