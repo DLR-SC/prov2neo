@@ -55,15 +55,15 @@ def main():
     """Command line script entry point.
 
     Retrieve command line arguments and proceed from there.
-    When no input is given or the path to the input file
-    is faulty, the program prints the --help message
+    When no input is given or the paths to the input files
+    are faulty, the program prints the --help message
     and exits.
 
-    If the path to the input file is valid the file is
-    deserialized into a prov.model.ProvDocument.
+    If the paths to the input file are valid the files are
+    deserialized into a prov.model.ProvDocuments.
     A prov2neo.client.Client is created and a connection to
     a neo4j instance is established before importing the
-    ProvDocument into the neo4j instance.
+    ProvDocument/ProvDocuments into the neo4j instance.
 
     Params:
     -------
