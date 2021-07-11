@@ -39,6 +39,18 @@ def create_parser():
     return parser
 
 
+def deserialize(file_path, fmt):
+    """Deserialize a provenance graph from a file."""
+    return ProvDocument.deserialize(source=file_path, format=fmt)
+
+
+def create_and_connect_client(args):
+    """Create a `prov2neo` client and connect it to a neo4j instance."""
+    client = Client()
+    client.connect(args.address, args.username, args.password, args.name, args.scheme)
+    return client
+
+
 def main():
     """Command line script entry point.
 
@@ -59,47 +71,56 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    if args.input is None:
-        print(parser.format_help())
-        return
-    if args.input == ".":
-        in_fp = sys.stdin
-    if os.path.exists(args.input):
-        in_fp = args.input
-    else:
-        print("Invalid file path {args.input}")
+    if not args.input:
         print(parser.format_help())
         return
 
-    try:
-        graph = ProvDocument.deserialize(source=in_fp, format=args.format)
-    except:
-        print(f"Failed to deserialize {in_fp}.")
-        print(parser.format_help())
-        return
+    # remove duplicates
+    args.input = list(set(args.input))
 
-    client = Client()
+    # do not read from stdin, when importing multiple graphs
+    if len(args.input) > 1 and "." in args.input:
+        args.input = [fp for fp in args.input if fp != "."]
+
     try:
-        client.connect(
-            address=args.address,
-            user=args.username,
-            password=args.password,
-            name=args.name,
-            scheme=args.scheme,
-        )
+        client = create_and_connect_client(args)
     except DatabaseError as e:
         print(f"{str(e)}")
         print("Hint: Check if your Neo4j version supports the creation of new databases. (The Community Edition does not!)")
+        return
     except ClientError as e:
         print(f"{str(e)}")
+        return
     except ConnectionError as e:
         print(f"{str(e)}")
         print("Hint: Check if you specified the correct database address, username and password.")
+        return
     except ValueError as e:
         print(f"{str(e)}")
         print("Hint: Check if you specified a supported connection scheme.")
-    else:
+        return
+
+    if args.input == ["."]:
+        try:
+            graph = deserialize(sys.stdin, args.format)
+        except:
+            print(f"Failed to deserialize from stdin.")
+            return
         client.import_graph(graph)
+    else:
+        # check for valid file paths before deserialization/import
+        for fp in args.input:
+            if not os.path.exists(fp):
+                print(f"File {fp} not found. Invalid path?")
+                return
+        # deserialize and import one file at a time
+        for fp in args.input:
+            try:
+                graph = deserialize(fp, args.format)
+            except:
+                print(f"Failed to deserialize {fp}.")
+                return
+            client.import_graph(graph)
 
 
 if __name__ == "__main__":
