@@ -26,26 +26,27 @@ prov2neo can be used both as a command line script and as a Python lib.
 
 #### As a Command Line Script
 ```
-usage: prov2neo [-h] [-f {provn,json,rdf,xml}] [-i INPUT] [-a ADDRESS] [-u USERNAME] [-p PASSWORD] [-n NAME]
+usage: prov2neo [-h] [-f {provn,json,rdf,xml}] [-i INPUT [INPUT ...]] [-a ADDRESS]
+                [-u USERNAME] [-p PASSWORD] [-n NAME]
                 [-s {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}]
 
-Import W3C PROV documents to neo4j.
+Import W3C PROV documents to Neo4j.
 
 optional arguments:
   -h, --help            show this help message and exit
   -f {provn,json,rdf,xml}, --format {provn,json,rdf,xml}
-                        input prov format
-  -i INPUT, --input INPUT
-                        input file, for stdin use '.'
+                        input PROV format
+  -i INPUT [INPUT ...], --input INPUT [INPUT ...]
+                        input files, use '.' for stdin
   -a ADDRESS, --address ADDRESS
-                        neo4j instance address
+                        Neo4j address
   -u USERNAME, --username USERNAME
-                        neo4j instance username
+                        Neo4j username
   -p PASSWORD, --password PASSWORD
-                        neo4j instance password
-  -n NAME, --name NAME  neo4j database name
+                        Neo4j password
+  -n NAME, --name NAME  Neo4j target database name
   -s {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}, --scheme {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}
-                        connection scheme to use when connecting to neo4j
+                        connection scheme to use when connecting to Neo4j
 ```
 
 #### As a Python Lib
