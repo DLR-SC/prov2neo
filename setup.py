@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name='prov2neo',
-    version='1.0',
+    version='1.1',
     author='Claas de Boer',
     author_email='claas.deboer@dlr.de',
     packages=['prov2neo'],
@@ -20,7 +20,7 @@ setup(
     ],
     url='https://github.com/DLR-SC/prov2neo',
     install_requires=[
-        'py2neo>=2021.1.5', 
+        'py2neo==2021.1.5', 
         'prov>=2.0.0', 
         'neotime==1.7.4'
     ],
