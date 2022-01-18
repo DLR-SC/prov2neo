@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict, deque
 from datetime import date, datetime, time, timedelta
 
-from neotime import DateTime, Duration, Time
+from interchange.time import DateTime, Duration, Time
 from prov.constants import PROV_N_MAP
 from prov.identifier import Identifier, QualifiedName
 from prov.model import (
