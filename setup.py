@@ -6,7 +6,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name='prov2neo',
-    version='1.1',
+    version='1.2',
     author='Claas de Boer',
     author_email='claas.deboer@dlr.de',
     packages=['prov2neo'],
@@ -22,7 +22,7 @@ setup(
     install_requires=[
         'py2neo==2021.2.3', 
         'prov>=2.0.0', 
-        'neotime==1.7.4'
+        'interchange'
     ],
     entry_points={'console_scripts': ['prov2neo = prov2neo.cli:main']},
     license='MIT',
@@ -39,5 +39,4 @@ setup(
         'Topic :: Database :: Front-Ends',
         ],
     include_package_data=True,
-
 )
