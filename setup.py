@@ -20,7 +20,7 @@ setup(
     ],
     url='https://github.com/DLR-SC/prov2neo',
     install_requires=[
-        'py2neo==2021.1.5', 
+        'py2neo==2021.2.3', 
         'prov>=2.0.0', 
         'neotime==1.7.4'
     ],
