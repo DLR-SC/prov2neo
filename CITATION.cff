@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use prov2neo in your research, please cite it using these metadata."
+title: prov2neo
+abstract: "prov2neo is a Python library and command line tool that imports W3C PROV documents into Neo4j."
+type: software
+authors: 
+  - family-names: "de Boer"
+    given-names: Claas
+    affiliation: "German Aerospace Center (DLR)"
+    orcid: "https://orcid.org/0000-0002-1841-8099"
+  - family-names: Schreiber
+    given-names: Andreas
+    affiliation: "German Aerospace Center (DLR)"
+    orcid: "https://orcid.org/0000-0001-5750-5649"
+version: 1.2
+date-released: "2022-01-18"
+license: MIT
+repository-code: "https://github.com/DLR-SC/prov2neo"
+keywords: 
+  - provenance
+  - "w3c-prov"
+  - neo4j
+  - "graph-database"
