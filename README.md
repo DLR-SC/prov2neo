@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/pypi/v/prov2neo" alt="Badge: PyPi Version">
   </a>
   <a href="https://pypistats.org/packages/prov2neo">
-    <img src="https://img.shields.io/pypi/dm/prov2neo" alt="Badge: PyPi Version">
+    <img src="https://img.shields.io/pypi/dm/prov2neo" alt="Badge: PyPi Downloads Monthly">
   </a>
   <a href="https://twitter.com/dlr_software">
     <img alt="Twitter: DLR Software" src="https://img.shields.io/twitter/follow/dlr_software.svg?style=social" target="_blank" />
