@@ -1,28 +1,56 @@
-# prov2neo — Import W3C PROV Documents to Neo4j
+<h1 align="center">Welcome to <code>prov2neo</code>! 👋</h1>
+<p align="center">
+  <a href="https://github.com/dlr-sc/prov2neo/blob/master/LICENSE">
+    <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-yellow.svg" target="_blank" />
+  </a>
+  <a href="https://img.shields.io/badge/Made%20with-Python-1f425f.svg">
+    <img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" alt="Badge: Made with Python"/>
+  </a>
+  <a href="https://pypi.org/project/prov2neo/">
+    <img src="https://img.shields.io/pypi/v/prov2neo" alt="Badge: PyPi Version">
+  </a>
+  <a href="https://pypistats.org/packages/prov2neo">
+    <img src="https://img.shields.io/pypi/dm/prov2neo" alt="Badge: PyPi Version">
+  </a>
+  <a href="https://twitter.com/dlr_software">
+    <img alt="Twitter: DLR Software" src="https://img.shields.io/twitter/follow/dlr_software.svg?style=social" target="_blank" />
+  </a>
+  <a href="https://open.vscode.dev/DLR-SC/prov2neo">
+    <img alt="Badge: Open in VSCode" src="https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=open%20in%20visual%20studio%20code&labelColor=2c2c32&color=007acc&logoColor=007acc" target="_blank" />
+  </a>
+  <a href="https://zenodo.org/badge/latestdoi/379262717">
+    <img alt="Badge: DOI" src="https://zenodo.org/badge/379262717.svg" target="_blank" />
+  </a>
+  <a href="https://www.w3.org/TR/prov-overview/">
+    <img alt="Badge: W3C PROV" src="https://img.shields.io/static/v1?logo=w3c&label=&message=PROV&labelColor=2c2c32&color=007acc&logoColor=007acc?logoWidth=200" target="_blank" />
+  </a>
+  <a href="https://citation-file-format.github.io/">
+    <img alt="Badge: Citation File Format Inside" src="https://img.shields.io/badge/-citable%20software-green" target="_blank" />
+  </a>
+</p>
 
-[![License: MIT](https://img.shields.io/github/license/dlr-sc/gitlab2prov?label=License)](https://opensource.org/licenses/MIT) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![PyPI version fury.io](https://badge.fury.io/py/prov2neo.svg)](https://pypi.python.org/pypi/prov2neo/) [![Upload Python Package](https://github.com/DLR-SC/prov2neo/actions/workflows/python-publish.yml/badge.svg?branch=main)](https://github.com/DLR-SC/prov2neo/actions/workflows/python-publish.yml) [![DOI](https://zenodo.org/badge/379262717.svg)](https://zenodo.org/badge/latestdoi/379262717)
-[![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/DLR-SC/prov2neo)
 
-`prov2neo` is a Python library for importing W3C PROV documents into [Neo4j](https://neo4j.com/).  
-`prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector).
+> `prov2neo` is a Python library and command line tool that imports W3C PROV documents into [Neo4j](https://neo4j.com/).  
+> 
+> `prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector) with the limitation of being specialized for neo4j.
 
-## Installation
+## 🏗️ Installation
 
-Clone the project and use the provided `setup.py` to install `prov2neo` locally
+Clone the project and use the provided `setup.py` to install `prov2neo` locally:
 
 ```bash
 python setup.py install --user
 ```
 
-Or install releases from PyPI:
+Or install the latest release from [PyPi](https://pypi.org/project/prov2neo/):
 
 ```bash
 pip install prov2neo
 ```
 
-## Usage
+## 🚀 Usage
 
-prov2neo can be used both as a command line script and as a Python lib.
+prov2neo can be used as a command line script or as a Python lib.
 
 ### As a Command Line Script
 
@@ -80,11 +108,18 @@ prov2neo supports formats that the [`prov`](https://github.com/trungdong/prov) l
 * [PROV-XML](http://www.w3.org/TR/prov-xml/)
 * [PROV-JSON](http://www.w3.org/Submission/prov-json/)
 
-## Contributing
+## 🤝 Contributing
 
-Merge and Pull requests are welcome!  
+Contributions and pull requests are welcome!  
 For major changes, please open an issue first to discuss what you would like to change.
 
-## License
+## ✨ Citable Software 
+This project contains a [`CITATION.cff`](https://citation-file-format.github.io/) file!  
 
-MIT
+`CITATION.cff` files are plain text files with human- and machine-readable citation information for software (and datasets).  
+GitHub will link the correct citation automatically.  
+To find out more about GitHubs support for `CITATION.cff` files visit [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)  
+
+## 📝 License
+Copyright © 2019-2022 [German Aerospace Center (DLR)](https://www.dlr.de/EN/Home/home_node.html) and individual contributors.  
+This project is [MIT](https://github.com/dlr-sc/prov2neo/blob/master/LICENSE) licensed.
