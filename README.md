@@ -121,5 +121,5 @@ GitHub will link the correct citation automatically.
 To find out more about GitHubs support for `CITATION.cff` files visit [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)  
 
 ## 📝 License
-Copyright © 2019-2022 [German Aerospace Center (DLR)](https://www.dlr.de/EN/Home/home_node.html) and individual contributors.  
+Copyright © 2020-2022 [German Aerospace Center (DLR)](https://www.dlr.de/EN/Home/home_node.html) and individual contributors.  
 This project is [MIT](https://github.com/dlr-sc/prov2neo/blob/master/LICENSE) licensed.
