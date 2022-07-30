@@ -31,8 +31,10 @@
 
 
 > `prov2neo` is a Python library and command line tool that imports W3C PROV documents into [Neo4j](https://neo4j.com/).  
-> 
-> `prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector) with the limitation of being specialized for neo4j.
+ 
+--- 
+
+`prov2neo` enables faster imports than comparable libs such as [`prov-db-connector`](https://github.com/DLR-SC/prov-db-connector) with the limitation of being specialized for neo4j.
 
 ## 🏗️ Installation
 
@@ -55,55 +57,45 @@ prov2neo can be used as a command line script or as a Python lib.
 ### As a Command Line Script
 
 ```
-usage: prov2neo [-h] [-f {provn,json,rdf,xml}] [-i INPUT [INPUT ...]] [-a ADDRESS]
-                [-u USERNAME] [-p PASSWORD] [-n NAME]
-                [-s {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}]
+Usage: prov2neo [OPTIONS] COMMAND1 [ARGS]... [COMMAND2 [ARGS]...]...
 
-Import W3C PROV documents to Neo4j.
+  Connect to a neo4j instance and import/export provenance documents.
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -f {provn,json,rdf,xml}, --format {provn,json,rdf,xml}
-                        input PROV format
-  -i INPUT [INPUT ...], --input INPUT [INPUT ...]
-                        input files, use '.' for stdin
-  -a ADDRESS, --address ADDRESS
-                        Neo4j address
-  -u USERNAME, --username USERNAME
-                        Neo4j username
-  -p PASSWORD, --password PASSWORD
-                        Neo4j password
-  -n NAME, --name NAME  Neo4j target database name
-  -s {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}, --scheme {bolt,bolt+s,bolt+ssc,http,https,http+s,http+ssc}
-                        connection scheme to use when connecting to Neo4j
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  connect  Connect to a neo4j instance.
+  export   (Deprecated) Export a provenance document from neo4j.
+  import   Import a provenance document into neo4j.
 ```
 
 ### As a Python Lib
 
 ```python
-from prov.model import ProvDocument
-from prov2neo.client import Client
+from prov2neo import Client, read_doc
 
-# read graph from JSON serialization
-graph = ProvDocument.deserialize(source="examples/horsemeat.json", format="json")
+doc = read_doc(filepath="examples/horsemeat.json")
 
-# create a prov2neo client
+# create a client
 client = Client()
-# connect to the neo4j instance
+# connect to your neo4j instance
 client.connect(
+    username="neo4j",
+    password="neo4j",
+    dbname="neo4j",
     address="localhost:7687",
-    user="jane doe",
-    password="**redacted**",
-    name="database name",
     scheme="bolt"
 )
-# import the PROV graph
-client.import_graph(graph)
+# import the document
+client.import_doc(doc)
 ```
+### Supported Formats 
 
-prov2neo supports formats that the [`prov`](https://github.com/trungdong/prov) library provides:
+`prov2neo` supports all deserialization formats supported by the [`prov`](https://github.com/trungdong/prov) library.
+Deserialization and with it the import of documents through the command line tool is limited to the following formats:
 
-* [PROV-N](http://www.w3.org/TR/prov-n/)
 * [PROV-O](http://www.w3.org/TR/prov-o/) (RDF)
 * [PROV-XML](http://www.w3.org/TR/prov-xml/)
 * [PROV-JSON](http://www.w3.org/Submission/prov-json/)
@@ -114,12 +106,14 @@ Contributions and pull requests are welcome!
 For major changes, please open an issue first to discuss what you would like to change.
 
 ## ✨ Citable Software 
-This project contains a [`CITATION.cff`](https://citation-file-format.github.io/) file!  
+
+This project is citable and contains a [`CITATION.cff`](https://citation-file-format.github.io/) file!  
+We'd be happy if you cite the project using the metadata contained in the `CITATION.cff` file if you use `prov2neo` in your research.
 
 `CITATION.cff` files are plain text files with human- and machine-readable citation information for software (and datasets).  
-GitHub will link the correct citation automatically.  
-To find out more about GitHubs support for `CITATION.cff` files visit [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)  
+To find out more about GitHub's support for citation metadata visit [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)  
 
 ## 📝 License
+
+This project is [MIT](https://github.com/dlr-sc/prov2neo/blob/master/LICENSE) licensed.  
 Copyright © 2020-2022 [German Aerospace Center (DLR)](https://www.dlr.de/EN/Home/home_node.html) and individual contributors.  
-This project is [MIT](https://github.com/dlr-sc/prov2neo/blob/master/LICENSE) licensed.
