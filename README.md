@@ -108,7 +108,7 @@ For major changes, please open an issue first to discuss what you would like to 
 ## ✨ Citable Software 
 
 This project is citable and contains a [`CITATION.cff`](https://citation-file-format.github.io/) file!  
-We'd be happy if you cite the project using the metadata contained in the `CITATION.cff` file if you use `prov2neo` in your research.
+Please cite the project using the metadata contained in the `CITATION.cff` if you use `prov2neo` in your research.
 
 `CITATION.cff` files are plain text files with human- and machine-readable citation information for software (and datasets).  
 To find out more about GitHub's support for citation metadata visit [here](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files)  
