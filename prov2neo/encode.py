@@ -12,7 +12,7 @@ from prov.model import (
     ProvDocument,
     ProvElement,
     ProvEntity,
-    ProvRelation
+    ProvRelation,
 )
 from py2neo import Subgraph
 from py2neo.data import Node, Relationship
@@ -351,8 +351,7 @@ def to_property_dict(property_set):
         The property set to convert to a dictonary of properties.
     """
     # encode the set of properties
-    encoded_property_set = [tuple(map(encode_value, item))
-                            for item in property_set]
+    encoded_property_set = [tuple(map(encode_value, item)) for item in property_set]
 
     # count the occurence of each property key
     key_count = Counter(key for key, _ in encoded_property_set)
@@ -430,8 +429,7 @@ def encode_edges(graph, nodes):
             properties = EdgePropertySet(edge)
             encoded_properties = to_property_dict(properties)
 
-            relation = Relationship(
-                source, label, target, **encoded_properties)
+            relation = Relationship(source, label, target, **encoded_properties)
             edges.append(relation)
     return edges
 
