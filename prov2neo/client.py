@@ -139,19 +139,7 @@ class Client:
         primary_key = PROV2NEO_ID
         # 'prov2neo:node' acts as primary label for merge
         primary_label = PROV2NEO_NODE[1]
-        """ 
-        from py2neo.data import Subgraph
-        nodes = list(encoded_graph.nodes)
-        for idx, i in enumerate(range(0, len(nodes), 10000)):
-            print(f"BATCH: {idx}")
-            tx = self.graph_db.begin()
-            tx.merge(Subgraph(nodes[i:i+10000]), primary_label=primary_label, primary_key=primary_key)
-            tx.commit()
-        for edge in encoded_graph.edges:
-            tx = self.graph_db.begin()
-            tx.merge(edge, primary_label=primary_label, primary_key=primary_key)
-            tx.commit()
-        """
+        
         tx = self.graph_db.begin()
         # merge all nodes & edges into self.graph_db
         # merge updates already existing nodes
