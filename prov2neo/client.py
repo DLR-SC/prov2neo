@@ -1,24 +1,27 @@
 from prov.model import ProvDocument
-from py2neo import ClientError, GraphService, DatabaseError
+from py2neo import ClientError, DatabaseError, GraphService
 
-from prov2neo.encode import (
-    NODE_LABELS,
-    PROV2NEO_ID,
-    PROV2NEO_NODE,
-    encode_graph
-)
+from prov2neo.encode import NODE_LABELS, PROV2NEO_ID, PROV2NEO_NODE, encode_graph
+from prov2neo.exceptions import ConnectionError
 
-class ConnectionError(Exception):
-    pass
+
+SUPPORTED_SCHEMES = [
+    "bolt",
+    "bolt+s",
+    "bolt+ssc",
+    "http",
+    "https",
+    "http+s",
+    "http+ssc",
+]
 
 
 class Scheme:
     def __init__(self, name: str):
-        SUPPORTED = ["bolt", "bolt+s", "bolt+ssc", "http", "https", "http+s", "http+ssc"]
-        if name not in SUPPORTED:
-            msg = f"'{name}' is not a supported connection scheme."
-            raise ValueError(msg)
+        if name not in SUPPORTED_SCHEMES:
+            raise ValueError(f"'{name}' is not a supported connection scheme.")
         self.name = name
+
     @property
     def enforce_tls(self):
         return self.name not in ["bolt", "http"]
@@ -35,19 +38,27 @@ class Client:
 
     def __init__(self):
         self.graph_db = None
+        self.connected = False
 
     @staticmethod
     def create_database(service: GraphService, name: str):
         try:
             system = service.system_graph
-            system.run(f"CREATE DATABASE $name IF NOT EXISTS;", parameters={"name": name})
+            system.run(
+                f"CREATE DATABASE $name IF NOT EXISTS;", parameters={"name": name}
+            )
         except ClientError as cex:
             raise cex
         except DatabaseError as dbex:
             raise dbex from None
 
-    def connect(self, address: str, user: str, password: str,
-                name: str, scheme: str) -> None:
+    @property
+    def is_connected(self):
+        return self.connected
+
+    def connect(
+        self, address: str, user: str, password: str, dbname: str, scheme: str
+    ) -> None:
         """Establishes connection to a neo4j instance.
 
         Parameters
@@ -84,16 +95,18 @@ class Client:
                 scheme=scheme.name,
                 user=user,
                 password=password,
-                secure=scheme.enforce_tls
+                secure=scheme.enforce_tls,
             )
         except Exception as ex:
             msg = f"Failed to establish a connection to '{scheme.name}://{address}' with user '{user}' and the specified password."
             raise ConnectionError(msg) from None
 
-        if name not in service.keys():
-            self.create_database(service, name)
-        self.graph_db = service[name]
+        if dbname not in service.keys():
+            self.create_database(service, dbname)
+
+        self.graph_db = service[dbname]
         self.add_uniqueness_constraints()
+        self.connected = True
 
     def add_uniqueness_constraints(self) -> None:
         """Add uniqueness constraints to the property key 'id' for all basic PROV types.
@@ -109,7 +122,7 @@ class Client:
             if "id" not in self.graph_db.schema.get_uniqueness_constraints(label):
                 self.graph_db.schema.create_uniqueness_constraint(label, "id")
 
-    def import_graph(self, graph: ProvDocument) -> None:
+    def import_doc(self, graph: ProvDocument) -> None:
         """Import a PROV graph to a named neo4j graph database.
 
         Parameters
@@ -122,21 +135,31 @@ class Client:
 
         # encode graph as py2neo Subgraph
         encoded_graph = encode_graph(graph)
-
-        tx = self.graph_db.begin()
         # node identifier acts as primary key for merge
         primary_key = PROV2NEO_ID
         # 'prov2neo:node' acts as primary label for merge
         primary_label = PROV2NEO_NODE[1]
-
+        """ 
+        from py2neo.data import Subgraph
+        nodes = list(encoded_graph.nodes)
+        for idx, i in enumerate(range(0, len(nodes), 10000)):
+            print(f"BATCH: {idx}")
+            tx = self.graph_db.begin()
+            tx.merge(Subgraph(nodes[i:i+10000]), primary_label=primary_label, primary_key=primary_key)
+            tx.commit()
+        for edge in encoded_graph.edges:
+            tx = self.graph_db.begin()
+            tx.merge(edge, primary_label=primary_label, primary_key=primary_key)
+            tx.commit()
+        """
+        tx = self.graph_db.begin()
         # merge all nodes & edges into self.graph_db
         # merge updates already existing nodes
         # and creates new ones if necessary
-        tx.merge(encoded_graph, primary_label=primary_label,
-                 primary_key=primary_key)
+        tx.merge(encoded_graph, primary_label=primary_label, primary_key=primary_key)
         tx.commit()
 
-    def export_graph(self):
+    def export_doc(self):
         """Export a PROV graph from a named neo4j graph database.
 
         Parameters
