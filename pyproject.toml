@@ -41,3 +41,6 @@ dev = ["isort", "black", "bump2version"]
 Twitter = "https://twitter.com/dlr_software"
 "Source Code" = "https://github.com/dlr-sc/prov2neo/"
 "Issue Tracker" = "https://github.com/dlr-sc/prov2neo/issues/"
+
+[tool.black]
+line-length = 88
