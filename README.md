@@ -38,16 +38,22 @@
 
 ## 🏗️ Installation
 
-Clone the project and use the provided `setup.py` to install `prov2neo` locally:
+Clone the project and use `pip` to install `prov2neo` locally:
 
 ```bash
-python setup.py install --user
+pip install .
 ```
 
 Or install the latest release from [PyPi](https://pypi.org/project/prov2neo/):
 
 ```bash
 pip install prov2neo
+```
+
+To install `prov2neo` with all dependencies for development, use:
+```bash
+pip install .[dev]         # when cloned from GitHub
+pip install prov2neo[dev]  # when installing from PyPi
 ```
 
 ## 🚀 Usage
