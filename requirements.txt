@@ -1,4 +1,0 @@
-py2neo==2021.2.3
-prov==2.0.0
-interchange
-click
