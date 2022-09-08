@@ -1,3 +1,43 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "prov2neo"
+description = "Import W3C Prov documents into Neo4j using py2neo's OGM."
+requires-python = ">=3.8"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+authors = [{ name = "Claas de Boer", email = "claas.deboer@dlr.de" }]
+maintainers = [
+    { name = "Andreas Schreiber", email = "andreas.schreiber@dlr.de" },
+]
+dependencies = ["prov>=2.0.0", "py2neo>=2021.2.3", "interchange", "click"]
+keywords = ["w3c prov", "neo4j", "graph import"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Topic :: Database :: Front-Ends",
+]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = { attr = "gitlab2prov.__version__" }
+
+[project.scripts]
+prov2neo = "prov2neo.cli:main"
+
+[project.optional-dependencies]
+dev = ["isort", "black", "bump2version"]
+
+[project.urls]
+Twitter = "https://twitter.com/dlr_software"
+"Source Code" = "https://github.com/dlr-sc/prov2neo/"
+"Issue Tracker" = "https://github.com/dlr-sc/prov2neo/issues/"
