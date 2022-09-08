@@ -12,4 +12,3 @@ def read_doc(filepath):
 
 def write_doc(doc, filepath, format):
     raise NotImplementedError
-    

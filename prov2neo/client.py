@@ -44,9 +44,7 @@ class Client:
     def create_database(service: GraphService, name: str):
         try:
             system = service.system_graph
-            system.run(
-                f"CREATE DATABASE $name IF NOT EXISTS;", parameters={"name": name}
-            )
+            system.run(f"CREATE DATABASE $name IF NOT EXISTS;", parameters={"name": name})
         except ClientError as cex:
             raise cex
         except DatabaseError as dbex:
@@ -139,7 +137,7 @@ class Client:
         primary_key = PROV2NEO_ID
         # 'prov2neo:node' acts as primary label for merge
         primary_label = PROV2NEO_NODE[1]
-        
+
         tx = self.graph_db.begin()
         # merge all nodes & edges into self.graph_db
         # merge updates already existing nodes

@@ -17,9 +17,7 @@ def main(ctx: click.Context):
 @main.command()
 @click.option("-a", "--address", required=True, type=str, help="Neo4j address.")
 @click.option("-u", "--user", required=True, type=str, help="Neo4j account username.")
-@click.option(
-    "-p", "--password", required=True, type=str, help="Neo4j account password."
-)
+@click.option("-p", "--password", required=True, type=str, help="Neo4j account password.")
 @click.option(
     "-n",
     "--dbname",
@@ -86,9 +84,7 @@ def import_doc(client: Client, input: list[str]):
 
 @main.command("export", deprecated=True)
 @click.option("-o", "--output", type=click.Path(), help="File to export to.")
-@click.option(
-    "-f", "--format", type=click.Choice(["json", "xml", "rdf", "dot", "provn"])
-)
+@click.option("-f", "--format", type=click.Choice(["json", "xml", "rdf", "dot", "provn"]))
 @click.pass_obj
 def export_doc(client: Client, output: str, format: str):
     """Export a provenance document from neo4j."""
